@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OEE Entry — IMM</title>
+<style>
+  :root{
+    --ink:#1c2521; --paper:#f6f4ee; --card:#ffffff; --line:#e4e0d2;
+    --accent:#2f6f4e; --accent-dark:#204f38; --muted:#6b6558;
+    --warn:#c85c3c; --bad:#b3401e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);padding:0 0 60px;}
+  .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
+  .header{background:var(--accent-dark);color:#fff;padding:26px 14px 30px;}
+  .header-inner{max-width:640px;margin:0 auto;}
+  .header .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:11px;opacity:.75;margin-bottom:6px;}
+  .header h1{margin:0 0 6px;font-size:24px;line-height:1.25;}
+  .header p{margin:0;font-size:13px;line-height:1.5;opacity:.9;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px;}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-dark);margin:0 0 12px;}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .row.single{grid-template-columns:1fr;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font-size:14px;font-family:inherit;background:#fdfcf9;color:var(--ink);
+  }
+  .field input:disabled{background:#f1efe6;color:var(--muted);}
+  .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .field.auto label::after{content:" (auto)";color:var(--accent);font-size:10px;}
+
+  .bd-row{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:#fdfcf9;}
+  .bd-row .row{margin-bottom:8px;}
+  .bd-remove{background:none;border:none;color:var(--bad);font-size:12px;font-weight:700;cursor:pointer;padding:2px 0;}
+  .add-bd-btn{
+    width:100%;padding:10px;border:1px dashed var(--accent);border-radius:6px;
+    background:none;color:var(--accent-dark);font-weight:700;font-size:13px;cursor:pointer;
+  }
+  .add-bd-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .bd-count{font-size:11px;color:var(--muted);text-align:right;margin-top:4px;}
+
+  .oee-hero{text-align:center;padding:6px 0 4px;}
+  .oee-hero .num{font-size:44px;font-weight:700;color:var(--accent-dark);line-height:1;}
+  .oee-hero .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+
+  .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
+  .metric{background:#f1efe6;border-radius:8px;padding:10px 8px;text-align:center;}
+  .metric .v{font-size:18px;font-weight:700;}
+  .metric .l{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+  .cap-row{display:flex;justify-content:space-between;font-size:13px;margin:6px 0;}
+  .cap-row .l{color:var(--muted);}
+  .cap-bar-track{height:10px;border-radius:5px;background:#e4e0d2;overflow:hidden;margin-top:4px;}
+  .cap-bar-fill{height:100%;background:var(--accent);border-radius:5px;transition:width .2s;}
+
+  .submit-btn{
+    width:100%;background:var(--accent);color:#fff;border:none;padding:14px;
+    font-size:15px;font-weight:700;border-radius:6px;cursor:pointer;margin-top:16px;
+  }
+  .submit-btn:hover{background:var(--accent-dark);}
+  .status-msg{text-align:center;font-size:13px;margin-top:10px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">Operational Excellence — IMM</div>
+    <h1>OEE Entry</h1>
+    <p>Live OEE input with breakdown logging and shift capacity tracking.</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>General information</h2>
+    <div class="row">
+      <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+      <div class="field"><label>Shift</label>
+        <select id="f_shift">
+          <option value="" disabled selected>Choose</option>
+          <option value="Day">Day</option>
+          <option value="Night">Night</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Machine name</label><input list="machineList" id="f_machine" placeholder="e.g. A-1"></div>
+      <div class="field"><label>Item name</label><input list="itemList" id="f_item" placeholder="Start typing..."></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Item master (auto-filled)</h2>
+    <div class="row">
+      <div class="field auto"><label>SKU / Item code</label><input type="text" id="f_sku" disabled></div>
+      <div class="field auto"><label>Product group</label><input type="text" id="f_group" disabled></div>
+    </div>
+    <div class="row">
+      <div class="field auto"><label>Production capacity (Pcs/Hr)</label><input type="text" id="f_capacity" disabled></div>
+      <div class="field"><label>Running cycle time (Sec)</label><input type="number" id="f_ct" step="0.1"></div>
+    </div>
+    <div class="row single">
+      <div class="field"><label>Running cavity</label><input type="number" id="f_cavity" min="1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Production numbers</h2>
+    <div class="row">
+      <div class="field auto"><label>Shift time (Min)</label><input type="number" id="f_shifttime" value="660"></div>
+      <div class="field"><label>Planned downtime (Min)</label><input type="number" id="f_planned" value="0" min="0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Total produced qty (Pcs)</label><input type="number" id="f_produced" value="0" min="0"></div>
+      <div class="field"><label>Reject qty (Pcs)</label><input type="number" id="f_reject" value="0" min="0"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Breakdown entry (up to 10)</h2>
+    <div id="bdContainer"></div>
+  </div>
+
+  <div class="card">
+    <h2>Live OEE</h2>
+    <div class="oee-hero">
+      <div class="num" id="oeeNum">0%</div>
+      <div class="lbl">Overall equipment effectiveness</div>
+    </div>
+    <div style="position:relative;height:200px;margin-top:10px;">
+      <canvas id="oeeChart" role="img" aria-label="Doughnut chart showing Availability, Performance and Quality contribution to OEE">Availability, Performance, Quality breakdown of OEE.</canvas>
+    </div>
+    <div class="metric-grid">
+      <div class="metric"><div class="v" id="mAvail">0%</div><div class="l">Availability</div></div>
+      <div class="metric"><div class="v" id="mPerf">0%</div><div class="l">Performance</div></div>
+      <div class="metric"><div class="v" id="mQual">0%</div><div class="l">Quality</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Shift capacity vs time</h2>
+    <div class="cap-row"><span class="l">Planned production time</span><span id="capPPT">0 min</span></div>
+    <div class="cap-row"><span class="l">Shift target qty (at capacity)</span><span id="capTarget">0 pcs</span></div>
+    <div class="cap-row"><span class="l">Entered produced qty</span><span id="capActual">0 pcs</span></div>
+    <div class="cap-row"><span class="l">Achievement</span><span id="capAch">0%</span></div>
+    <div class="cap-bar-track"><div class="cap-bar-fill" id="capBar" style="width:0%"></div></div>
+  </div>
+
+  <button class="submit-btn" id="submitBtn" type="button">Submit entry</button>
+  <p class="status-msg" id="statusMsg"></p>
+
+</div>
+
+<datalist id="machineList"></datalist>
+<datalist id="itemList"></datalist>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SHEET_ENDPOINT = "YOUR_WEB_APP_URL_HERE";
+
+const ITEMS = [
+["13314109","Bracket Tube","ENDCAP (BRACKET) FOR 10W 40W BRACKET TUBE (SFG)",55,4],
+["13314089","Down Panel","Body For 5W & 7W Down Panel (SFG)",37,2],
+["13314097","DB Box","Enovar Db Back Part For L1 (SFG)",35,2],
+["13314096","DB Box","Enovar Db Front Part For L1 (SFG)",35,2],
+["13314098","DB Box","Enovar Db Transparent Part For L1 (SFG)",42,2],
+["13314100","DB Box","Enovar Db Back Part For L2 (SFG)",38,2],
+["13314099","DB Box","Enovar Db Front Part For L2 (SFG)",42,2],
+["13314101","DB Box","Enovar Db Transparent Part For L2 (SFG)",45,4],
+["13314107","DB Box","Enovar Db Panel For 10-13 (SFG)",45,1],
+["13314108","DB Box","Enovar Db Transparent Cover For 10-13 (SFG)",70,2],
+["13314102","DB Box","Enovar Db Panel For 4-6 (SFG)",45,1],
+["13314103","DB Box","Enovar Db Transparent Cover For 4-6 (SFG)",60,2],
+["13314105","DB Box","Enovar Db Panel For 7-9 (SFG)",38,1],
+["13314106","DB Box","Enovar Db Transparent Cover For 7-9 (SFG)",65,2],
+["13314104","DB Box","Enovar Db Screw Cover (SFG)",30,16],
+["13314124","ENOVAR PIANO 2 PIN SOCKET 5A","Decorating Frame For Piano (SFG)",34,24],
+["13314131","ENOVAR PIANO 2 PIN SOCKET 5A","Piano Fixture For 2 Pin Socket (SFG)",38,32],
+["13314132","ENOVAR PIANO 2 PIN SOCKET 5A","Piano Back Part For 2 Pin Socket (SFG)",28,16],
+["13314125","ENOVAR PIANO BELL PUSH 6A","Switch Fixture For Piano (SFG)",40,32],
+["13314126","ENOVAR PIANO BELL PUSH 6A","Switch Button For Piano (SFG)",40,32],
+["13314127","ENOVAR PIANO BELL PUSH 6A","Piano Switch Press Pin (SFG)",35,128],
+["13314128","ENOVAR PIANO BELL PUSH 6A","Back Part For Piano One Way Switch (SFG)",38,32],
+["13314138","ENOVAR PIANO FAN DIMMER 200W","Back Part For Piano Fan Dimmer (SFG)",35,8],
+["13314139","ENOVAR PIANO FAN DIMMER 200W","Fan Dimmer Circuit For Piano (SFG)",32,8],
+["13314135","ENOVAR PIANO FAN DIMMER 200W","Fixture For Piano Fan Dimmer (SFG)",35,8],
+["13314137","ENOVAR PIANO FAN DIMMER 200W","Middle Board For Piano Fan Dimmer (SFG)",40,8],
+["13314136","ENOVAR PIANO FAN DIMMER 200W","Knob For Piano Fan Dimmer (SFG)",35,16],
+["13314133","ENOVAR PIANO FUSE 5A","Cover For Piano Fuse (SFG)",35,8],
+["13314165","ENOVAR PIANO FUSE 5A","FUSING WIRE HOLDER FOR PIANO FUSE (SFG)",35,8],
+["13314134","ENOVAR PIANO INDICATOR","Piano Indicator Transparent Red Cover (SFG)",35,32],
+["13314129","ENOVAR PIANO TWO WAY SWITCH 6A","Piano Swtich Radium (SFG)",35,128],
+["13314130","ENOVAR PIANO TWO WAY SWITCH 6A","Piano Back Part For Two Way Switch (SFG)",40,32],
+["13314063","Exhaust Fan","Enovar Exhaust Fan 10&12 Fan Lock (SFG)",38,2],
+["13314064","Exhaust Fan","Enovar Exhaust Fan 10&12 Oil Cup (SFG)",28,2],
+["13314070","Exhaust Fan","Enovar Exhaust Fan 10In Back Part (SFG)",60,1],
+["13314071","Exhaust Fan","Enovar Exhaust Fan 10In Blade (SFG)",38,1],
+["13314072","Exhaust Fan","Enovar Exhaust Fan 10In Grille (SFG)",38,2],
+["13314073","Exhaust Fan","Enovar Exhaust Fan 10In Linkage Rod (SFG)",35,2],
+["13314074","Exhaust Fan","Enovar Exhaust Fan 10In Net Cover (SFG)",54,1],
+["13314069","Exhaust Fan","Enovar Exhaust Fan 10In Panel (SFG)",53,1],
+["13314061","Exhaust Fan","Enovar Exhaust Fan 12In Back Part (SFG)",70,1],
+["13314062","Exhaust Fan","Enovar Exhaust Fan 12In Blade (SFG)",39,1],
+["13314065","Exhaust Fan","Enovar Exhaust Fan 12In Grille (SFG)",45,2],
+["13314066","Exhaust Fan","Enovar Exhaust Fan 12In Linkage Rod (SFG)",45,4],
+["13314068","Exhaust Fan","Enovar Exhaust Fan 12In Net Cover 9 (SFG)",65,1],
+["13314060","Exhaust Fan","Enovar Exhaust Fan 12In Panel (SFG)",65,1],
+["13314195","Exhaust Fan","ENOVAR EXHAUST FAN 12 OIL CUP (SFG)",35,2],
+["13314078","Exhaust Fan","Enovar Exhaust Fan 6&8 Fan Lock (SFG)",30,2],
+["13314196","Exhaust Fan","Enovar Exhaust Fan 6 Oil Cup (SFG)",28,2],
+["13314084","Exhaust Fan","Enovar Exhaust Fan 6In Back Part (SFG)",55,1],
+["13314085","Exhaust Fan","Enovar Exhaust Fan 6In Blade (SFG)",42,1],
+["13314086","Exhaust Fan","Enovar Exhaust Fan 6In Grille (SFG)",38,2],
+["13314087","Exhaust Fan","Enovar Exhaust Fan 6In Linkage Rod (SFG)",43,4],
+["13314088","Exhaust Fan","Enovar Exhaust Fan 6In Net Cover (SFG)",48,1],
+["13314083","Exhaust Fan","Enovar Exhaust Fan 6In Panel (SFG)",48,1],
+["13314076","Exhaust Fan","Enovar Exhaust Fan 8In Back Part (SFG)",55,1],
+["13314077","Exhaust Fan","Enovar Exhaust Fan 8In Blade (SFG)",36,1],
+["13314080","Exhaust Fan","Enovar Exhaust Fan 8In Grille (SFG)",32,2],
+["13314081","Exhaust Fan","Enovar Exhaust Fan 8In Linkage Rod (SFG)",41,4],
+["13314082","Exhaust Fan","Enovar Exhaust Fan 8In Net Cover (SFG)",45,1],
+["13314075","Exhaust Fan","Enovar Exhaust Fan 8In Panel (SFG)",45,1],
+["13314197","Exhaust Fan","Enovar Exhaust Fan 8 Oil Cup (SFG)",30,2],
+["13314113","Exhaust Fan","ENOVAR EXHAUST FAN CABLE LOCK (SFG)",44,32],
+["13314067","Exhaust Fan","Enovar Exhaust Fan Capacitor Cover (SFG)",30,8],
+["13314112","Exhaust Fan","ENOVAR EXHAUST FAN SPRING LOCK (SFG)",28,12],
+["13314153","EXTENSION SOCKET WITH SWITCH - 3S","3S Exten. Socket Cover (Sfg)",55,1],
+["13314152","EXTENSION SOCKET Common","3S Exten. Socket Bottom (Sfg)",55,1],
+["13314155","EXTENSION SOCKET WITH SWITCH - 4S","4S Exten. Socket Cover (Sfg)",60,1],
+["13314154","EXTENSION SOCKET Common","4S Exten. Socket Bottom (Sfg)",60,1],
+["13314157","EXTENSION SOCKET WITH SWITCH - 5S","5S Exten. Socket Cover (Sfg)",65,1],
+["13314156","EXTENSION SOCKET Common","5S Exten. Socket Bottom (Sfg)",65,1],
+["13314164","EXTENSION SOCKET Common","Exten. Socket Switch Button (Sfg)",55,16],
+["13314159","EXTENSION SOCKET Common","Exten. Socket Decorative Part ( Sfg)",40,12],
+["13314160","EXTENSION SOCKET Common","Exten. Socket Indicator Cover (Sfg)",35,12],
+["13314178","EXTENSION SOCKET Common","EXTEN. SOCKET SWITCH BUTTON HOLDER (SFG)",45,12],
+["13314158","EXTENSION SOCKET Common","Exten. Socket Cable Support (Sfg)",45,16],
+["13314163","EXTENSION SOCKET Common","Exten. Socket Shutter (Sfg)",40,16],
+["13314161","EXTENSION SOCKET Common","Exten. Socket Power Cable Support (Sfg)",40,8],
+["13314140","MOUNTING BOX","Mounting Box Fixture Plastic (SFG)",27,8],
+["13314141","MOUNTING BOX","Mounting Box (SFG)",38,2],
+["13314148","ENOVAR 3 PIN FLAT PLUG 13A","3 Pin Flat Plug (White) Cover-13A (SFG)",50,2],
+["13314149","ENOVAR 3 PIN FLAT PLUG 13A","3 Pin Flat Plug (White) Bottom -13A (SFG)",27,2],
+["13314150","ENOVAR 3 PIN FLAT PLUG 13A","3 Pin Flat Plug Lock-13 Amp (SFG)",35,16],
+["13314151","ENOVAR 3 PIN FLAT PLUG 13A","3 Pin Flat Plug Wire Press-13 Amp (SFG)",45,8],
+["13314145","ENOVAR 2 PIN PLUG 10A","2 Pin Plug Cover (PBT) (SFG)",45,4],
+["13314146","ENOVAR 2 PIN PLUG 10A","2 Pin Plug Back Part (SFG)",33,4],
+["13314147","ENOVAR 2 PIN PLUG 10A","2 Pin Plug Lock (SFG)",40,4],
+["13314142","ENOVAR 3 PIN ROUND PLUG 20A","3-Pin Plug Cover 16 Amp (SFG)",31,8],
+["13314143","ENOVAR 3 PIN ROUND PLUG 20A","3-Pin Plug LED Cover 16 Amp (SFG)",50,8],
+["13314144","ENOVAR 3 PIN ROUND PLUG 20A","3-Pin Plug Buttom 16 Amp (SFG)",31,2],
+["13314090","ENOVAR OCTAGONAL HOLDER B22","Holder Body For Octagonal B22 (SFG)",65,4],
+["13314091","ENOVAR OCTAGONAL HOLDER B22","Decorating Plug For Octagonal Holder (SFG)",35,8],
+["13314092","ENOVAR OCTAGONAL HOLDER B22","Common Plastic Lock For B22 Holders (SFG) White",26,16],
+["13314093","ENOVAR OCTAGONAL HOLDER E27","Holder Body For Octagonal E27 (SFG)",70,2],
+["13314094","ENOVAR OCTAGONAL CEILING ROSE","Cover For Octagonal Ceiling Rose (SFG)",34,2],
+["13314095","ENOVAR OCTAGONAL CEILING ROSE","Ceiling Rose Body For Octagonal (SFG)",38,2]
+].map(r => ({code:r[0], group:r[1], name:r[2], ct:r[3], cvt:r[4]}));
+
+const MACHINES = ["A-1","A-2","A-3","A-4","A-5","B-1","B-2","B-3","B-4","B-5","B-6","B-7"];
+
+const ELECTRICAL_BD = ["Servo motor fault","Servo drive/amplifier fault","PLC / HMI controller fault","Heater band failure","Thermocouple fault","Sensor fault (limit switch/proximity)","Solenoid/proportional valve fault (electrical side)","Power supply/MCB trip","Wiring/connector/cable fault","Encoder fault","Robot/manipulator electrical fault","Hopper dryer electrical fault","Mold temperature controller (MTC) electrical fault","Chiller electrical fault","Power failure (plant supply)"];
+
+const MECHANICAL_BD = ["Hydraulic oil leakage","Hydraulic pump failure/noise","Toggle mechanism fault/wear","Tie bar issue","Clamping cylinder leakage","Injection cylinder leakage","Screw/barrel wear","Non-return valve (check ring) wear","Nozzle blockage/leakage","Mold cooling line blockage/leak","Ejector pin stuck/broken","Mold misalignment","Platen parallelism issue","Cooling water line blockage/scaling","Compressed air pressure low","Conveyor/material loader mechanical fault"];
+
+document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
+
+const machineListEl = document.getElementById('machineList');
+MACHINES.forEach(m => { const o=document.createElement('option'); o.value=m; machineListEl.appendChild(o); });
+
+const itemListEl = document.getElementById('itemList');
+ITEMS.forEach(it => { const o=document.createElement('option'); o.value=it.name; itemListEl.appendChild(o); });
+
+function capacityFor(item){
+  return Math.round((3600/item.ct)*item.cvt);
+}
+
+document.getElementById('f_item').addEventListener('change', function(){
+  const match = ITEMS.find(it => it.name === this.value);
+  if(!match) return;
+  document.getElementById('f_sku').value = match.code;
+  document.getElementById('f_group').value = match.group;
+  document.getElementById('f_capacity').value = capacityFor(match) + " pcs/hr";
+  document.getElementById('f_ct').value = match.ct;
+  document.getElementById('f_cavity').value = match.cvt;
+  recalc();
+});
+
+const bdContainer = document.getElementById('bdContainer');
+
+const REASON_TYPE_MAP = {};
+ELECTRICAL_BD.forEach(r => REASON_TYPE_MAP[r] = 'Electrical');
+MECHANICAL_BD.forEach(r => REASON_TYPE_MAP[r] = 'Mechanical');
+const ALL_REASONS = [...ELECTRICAL_BD, ...MECHANICAL_BD];
+
+function buildBdRows(){
+  for(let i = 1; i <= 10; i++){
+    const row = document.createElement('div');
+    row.className = 'bd-row';
+    row.dataset.idx = i;
+    row.innerHTML = `
+      <div class="row single">
+        <div class="field"><label>Breakdown ${i} — reason</label>
+          <select class="bd-reason">
+            <option value="" selected>None</option>
+            ${ALL_REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Duration (Min)</label><input type="number" class="bd-duration" value="0" min="0"></div>
+        <div class="field auto"><label>Breakdown type</label><input type="text" class="bd-type" disabled placeholder="—"></div>
+      </div>
+    `;
+    bdContainer.appendChild(row);
+
+    row.querySelector('.bd-reason').addEventListener('change', function(){
+      const typeField = row.querySelector('.bd-type');
+      typeField.value = this.value ? REASON_TYPE_MAP[this.value] : '';
+      recalc();
+    });
+    row.querySelector('.bd-duration').addEventListener('input', recalc);
+  }
+}
+buildBdRows();
+
+let oeeChart = null;
+function initChart(){
+  const ctx = document.getElementById('oeeChart');
+  oeeChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Availability','Performance','Quality'],
+      datasets: [{ data: [0,0,0], backgroundColor: ['#2a78d6','#eb6834','#1baf7a'], borderColor: '#f6f4ee', borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      cutout: '65%'
+    }
+  });
+}
+initChart();
+
+function pct(v){ return Math.round(Math.max(0, Math.min(100, v*100))); }
+
+function recalc(){
+  const shiftTime = parseFloat(document.getElementById('f_shifttime').value) || 0;
+  const planned = parseFloat(document.getElementById('f_planned').value) || 0;
+  const produced = parseFloat(document.getElementById('f_produced').value) || 0;
+  const reject = parseFloat(document.getElementById('f_reject').value) || 0;
+  const ct = parseFloat(document.getElementById('f_ct').value) || 0;
+  const cavity = parseFloat(document.getElementById('f_cavity').value) || 0;
+  const capacityText = document.getElementById('f_capacity').value;
+  const capacity = parseFloat(capacityText) || 0;
+
+  let bdMinutes = 0;
+  document.querySelectorAll('.bd-duration').forEach(el => { bdMinutes += parseFloat(el.value) || 0; });
+
+  const plannedProdTime = Math.max(0, shiftTime - planned);
+  const runTime = Math.max(0, plannedProdTime - bdMinutes);
+
+  const availability = plannedProdTime > 0 ? runTime / plannedProdTime : 0;
+
+  const idealCycleSec = cavity > 0 ? ct / cavity : 0;
+  const performance = (runTime > 0 && idealCycleSec > 0) ? (produced * idealCycleSec) / (runTime * 60) : 0;
+
+  const quality = produced > 0 ? Math.max(0, (produced - reject) / produced) : 0;
+
+  const oee = availability * performance * quality;
+
+  document.getElementById('oeeNum').textContent = pct(oee) + '%';
+  document.getElementById('mAvail').textContent = pct(availability) + '%';
+  document.getElementById('mPerf').textContent = pct(Math.min(performance,1)) + '%';
+  document.getElementById('mQual').textContent = pct(quality) + '%';
+
+  if(oeeChart){
+    oeeChart.data.datasets[0].data = [pct(availability), pct(Math.min(performance,1)), pct(quality)];
+    oeeChart.update();
+  }
+
+  document.getElementById('capPPT').textContent = Math.round(plannedProdTime) + ' min';
+  const target = Math.round(capacity * (plannedProdTime/60));
+  document.getElementById('capTarget').textContent = target + ' pcs';
+  document.getElementById('capActual').textContent = Math.round(produced) + ' pcs';
+  const ach = target > 0 ? Math.round((produced/target)*100) : 0;
+  document.getElementById('capAch').textContent = ach + '%';
+  document.getElementById('capBar').style.width = Math.min(100, ach) + '%';
+}
+
+['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_cavity'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalc);
+});
+
+recalc();
+
+document.getElementById('submitBtn').addEventListener('click', function(){
+  const statusEl = document.getElementById('statusMsg');
+  const payload = {
+    date: document.getElementById('f_date').value,
+    shift: document.getElementById('f_shift').value,
+    machine: document.getElementById('f_machine').value,
+    item: document.getElementById('f_item').value,
+    sku: document.getElementById('f_sku').value,
+    productGroup: document.getElementById('f_group').value,
+    capacityPcsHr: document.getElementById('f_capacity').value,
+    cycleTimeSec: document.getElementById('f_ct').value,
+    cavity: document.getElementById('f_cavity').value,
+    shiftTimeMin: document.getElementById('f_shifttime').value,
+    plannedDowntimeMin: document.getElementById('f_planned').value,
+    producedQty: document.getElementById('f_produced').value,
+    rejectQty: document.getElementById('f_reject').value,
+    oeePercent: document.getElementById('oeeNum').textContent,
+    availability: document.getElementById('mAvail').textContent,
+    performance: document.getElementById('mPerf').textContent,
+    quality: document.getElementById('mQual').textContent,
+    breakdowns: Array.from(document.querySelectorAll('.bd-row')).map(row => ({
+      type: row.querySelector('.bd-type').value,
+      reason: row.querySelector('.bd-reason').value,
+      durationMin: row.querySelector('.bd-duration').value
+    }))
+  };
+
+  if(!payload.shift || !payload.machine || !payload.item){
+    statusEl.textContent = 'Please fill Shift, Machine name and Item name before submitting.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  if(SHEET_ENDPOINT === "YOUR_WEB_APP_URL_HERE"){
+    statusEl.textContent = 'Google Sheet not connected yet — entry not saved.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  statusEl.textContent = 'Submitting...';
+  statusEl.style.color = '#6b6558';
+
+  fetch(SHEET_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }).then(() => {
+    statusEl.textContent = 'Entry submitted.';
+    statusEl.style.color = '#2f6f4e';
+  }).catch(() => {
+    statusEl.textContent = 'Submitted (response not confirmed — check your sheet).';
+    statusEl.style.color = '#6b6558';
+  });
+});
+</script>
+
+</body>
+</html>
