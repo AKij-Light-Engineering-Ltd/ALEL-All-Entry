@@ -163,7 +163,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SHEET_ENDPOINT = "YOUR_WEB_APP_URL_HERE";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbyxt3oAtd2U3jepPDlTsmB7qghNmHX7lxAhWqKnG-jVnqjcqRs-q3lpkG10KANfBOSK/exec";
 
 const ITEMS = [
 ["13314109","Bracket Tube","ENDCAP (BRACKET) FOR 10W 40W BRACKET TUBE (SFG)",55,4],
@@ -404,6 +404,7 @@ recalc();
 document.getElementById('submitBtn').addEventListener('click', function(){
   const statusEl = document.getElementById('statusMsg');
   const payload = {
+    sheet: "OEE Entry",
     date: document.getElementById('f_date').value,
     shift: document.getElementById('f_shift').value,
     machine: document.getElementById('f_machine').value,
@@ -445,6 +446,9 @@ document.getElementById('submitBtn').addEventListener('click', function(){
 
   fetch(SHEET_ENDPOINT, {
     method: 'POST',
+    mode: 'no-cors',
+    credentials: 'include',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
   }).then(() => {
     statusEl.textContent = 'Entry submitted.';
