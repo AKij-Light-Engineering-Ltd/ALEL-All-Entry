@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALEL All Entry — Operational Excellence</title>
+<style>
+  :root{
+    --ink:#1c2521;
+    --paper:#f6f4ee;
+    --card:#ffffff;
+    --line:#e4e0d2;
+    --accent:#2f6f4e;
+    --accent-dark:#204f38;
+    --muted:#6b6558;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 0 60px;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px;}
+  .header{
+    background:var(--accent-dark);
+    color:#fff;
+    padding:34px 16px 40px;
+  }
+  .header-inner{max-width:900px;margin:0 auto;}
+  .header .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:12px;
+    opacity:.75;
+    margin-bottom:8px;
+  }
+  .header h1{margin:0 0 10px;font-size:30px;line-height:1.25;}
+  .header p{margin:0;font-size:14px;line-height:1.6;opacity:.9;max-width:640px;}
+
+  .section-label{
+    margin:30px 0 16px;
+    font-size:13px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--accent-dark);
+  }
+  .section-sub{
+    margin:-12px 0 20px;
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:620px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .entry-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px;
+  }
+  .entry-top{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;}
+  .badge{
+    flex:none;
+    width:36px;height:36px;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;
+    letter-spacing:.02em;
+  }
+  .entry-title{font-size:15px;font-weight:700;margin:0 0 4px;}
+  .entry-desc{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0;}
+
+  .entry-select-row{display:flex;gap:8px;align-items:center;}
+  select.line-select{
+    flex:1;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fdfcf9;
+    color:var(--ink);
+  }
+  select.line-select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .choose-btn{
+    flex:none;
+    background:none;
+    border:none;
+    color:var(--accent-dark);
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    padding:9px 4px;
+  }
+  .choose-btn:hover{text-decoration:underline;}
+  .choose-btn:disabled{color:var(--line);cursor:not-allowed;}
+
+  .quick-open-row{
+    text-align:center;
+    margin-top:36px;
+  }
+  .quick-open-btn{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:13px 30px;
+    font-size:14.5px;
+    font-weight:700;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .quick-open-btn:hover{background:var(--accent-dark);}
+  .quick-open-btn:disabled{background:var(--line);cursor:not-allowed;}
+  .quick-open-note{
+    margin-top:10px;
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .signature{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">Operational Excellence — All Entry</div>
+    <h1>ALEL All Entry</h1>
+    <p>Select an entry type from any dropdown below to open its form. One interface for all ALEL (IMM / GSS / LED / HAP) daily operations entry.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="section-label">Entry Forms</div>
+  <div class="section-sub">Choose an option inside a dropdown to open that entry form in a new tab.</div>
+
+  <div class="grid" id="cardGrid">
+    <!-- 5S Form -->
+    <div class="entry-card" data-title="5S Form" data-url="https://marufhossain2707.github.io/5s-Audit/">
+      <div class="entry-top">
+        <div class="badge" style="background:#2f6f4e;">5S</div>
+        <div>
+          <p class="entry-title">5S Form</p>
+          <p class="entry-desc">5S Audit scoring (Sort, Set in Order, Shine, Standardize, Sustain) per floor.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- OEE Entry -->
+    <div class="entry-card" data-title="OEE Entry" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#2f8f8f;">OE</div>
+        <div>
+          <p class="entry-title">OEE Entry</p>
+          <p class="entry-desc">IMM OEE input with live preview, NPT &amp; breakdown logging, item master and data log export (local).</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Breakdown Entry -->
+    <div class="entry-card" data-title="Breakdown Entry" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#c85c3c;">BD</div>
+        <div>
+          <p class="entry-title">Breakdown Entry</p>
+          <p class="entry-desc">Record machine / line breakdowns, downtime duration and root cause.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Near Miss -->
+    <div class="entry-card" data-title="Near Miss" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#b3401e;">NM</div>
+        <div>
+          <p class="entry-title">Near Miss</p>
+          <p class="entry-desc">Report near-miss incidents or unsafe situations observed on the floor.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Safety Observation -->
+    <div class="entry-card" data-title="Safety Observation" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#a5451e;">SO</div>
+        <div>
+          <p class="entry-title">Safety Observation</p>
+          <p class="entry-desc">Log unsafe acts and unsafe conditions with risk level.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Kaizen / Improvement Idea -->
+    <div class="entry-card" data-title="Kaizen / Improvement Idea" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#d99a2b;">KZ</div>
+        <div>
+          <p class="entry-title">Kaizen / Improvement Idea</p>
+          <p class="entry-desc">Continuous improvement suggestions, problem statement and expected benefit.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- TPM / AM Checklist -->
+    <div class="entry-card" data-title="TPM / AM Checklist" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#d9a52b;">TP</div>
+        <div>
+          <p class="entry-title">TPM / AM Checklist</p>
+          <p class="entry-desc">Autonomous Maintenance checklist for daily equipment care.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Skill Matrix -->
+    <div class="entry-card" data-title="Skill Matrix" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#3f4f8f;">SK</div>
+        <div>
+          <p class="entry-title">Skill Matrix</p>
+          <p class="entry-desc">Operator skill assessment per process / machine.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Energy Audit -->
+    <div class="entry-card" data-title="Energy Audit" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#3f4f8f;">EA</div>
+        <div>
+          <p class="entry-title">Energy Audit</p>
+          <p class="entry-desc">Daily utility / energy consumption logging and observations.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+
+    <!-- Meeting MOM -->
+    <div class="entry-card" data-title="Meeting MOM" data-url="#">
+      <div class="entry-top">
+        <div class="badge" style="background:#4f5a3f;">MM</div>
+        <div>
+          <p class="entry-title">Meeting MOM</p>
+          <p class="entry-desc">Minutes of meeting — attendees, decisions and action items.</p>
+        </div>
+      </div>
+      <div class="entry-select-row">
+        <select class="line-select">
+          <option value="">Choose</option>
+          <option value="IMM">IMM</option>
+          <option value="GSS">GSS</option>
+          <option value="LED">LED</option>
+          <option value="HAP">HAP</option>
+        </select>
+        <button class="choose-btn" type="button">Open →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-open-row">
+    <button class="quick-open-btn" id="quickOpenBtn" disabled>Quick Open — Select a Form</button>
+    <p class="quick-open-note">Use the dropdowns above to open any entry form.</p>
+  </div>
+
+  <p class="signature">ALEL All Entry · Operational Excellence, AROPEX</p>
+</div>
+
+<script>
+  let lastCard = null;
+
+  function openCard(card){
+    const url = card.getAttribute('data-url');
+    const title = card.getAttribute('data-title');
+    if(!url || url === '#'){
+      alert(title + ' is not linked yet. Add its live form URL in the HTML (data-url attribute) once it is published.');
+      return;
+    }
+    window.open(url, '_blank');
+  }
+
+  document.querySelectorAll('.entry-card').forEach(card => {
+    const btn = card.querySelector('.choose-btn');
+    const select = card.querySelector('.line-select');
+    const title = card.getAttribute('data-title');
+
+    btn.addEventListener('click', () => openCard(card));
+
+    select.addEventListener('change', () => {
+      lastCard = card;
+      const quickBtn = document.getElementById('quickOpenBtn');
+      quickBtn.disabled = false;
+      quickBtn.textContent = 'Quick Open — ' + title;
+    });
+  });
+
+  document.getElementById('quickOpenBtn').addEventListener('click', () => {
+    if(lastCard) openCard(lastCard);
+  });
+</script>
+
+</body>
+</html>
