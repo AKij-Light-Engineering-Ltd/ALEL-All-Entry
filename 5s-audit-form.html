@@ -432,7 +432,7 @@
 
 <script>
 // Paste the Web App URL you get after deploying the Apps Script here:
-const SHEET_ENDPOINT = "https://script.google.com/a/macros/akijlightengineering.com/s/AKfycbzwkm4gx5y1Iolb8px7iv_r9sV3on_9xO6qLV1nIxT8wjR79OVX7IY2hJaEewk35hgj/exec";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz_92oalEw3YEloH-9wEQ7irO4lslh9kr25_gylP9JmXr5CMpYAA0bJtozHZUpMf_uF/exec";
 
 document.getElementById('auditForm').addEventListener('submit', function(e){
   e.preventDefault();
@@ -460,6 +460,7 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
   data.total = total;
   data.max = max;
   data.percent = pct;
+  data.sheet = "5S Form";
 
   btn.disabled = true;
   btn.textContent = "Submitting...";
