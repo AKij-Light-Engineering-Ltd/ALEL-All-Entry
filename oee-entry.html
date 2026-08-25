@@ -403,6 +403,8 @@ recalc();
 
 document.getElementById('submitBtn').addEventListener('click', function(){
   const statusEl = document.getElementById('statusMsg');
+  const submitBtn = this;
+
   const payload = {
     sheet: "OEE Entry",
     date: document.getElementById('f_date').value,
@@ -421,13 +423,15 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     oeePercent: document.getElementById('oeeNum').textContent,
     availability: document.getElementById('mAvail').textContent,
     performance: document.getElementById('mPerf').textContent,
-    quality: document.getElementById('mQual').textContent,
-    breakdowns: Array.from(document.querySelectorAll('.bd-row')).map(row => ({
-      type: row.querySelector('.bd-type').value,
-      reason: row.querySelector('.bd-reason').value,
-      durationMin: row.querySelector('.bd-duration').value
-    }))
+    quality: document.getElementById('mQual').textContent
   };
+
+  document.querySelectorAll('.bd-row').forEach((row, i) => {
+    const n = i + 1;
+    payload["breakdown" + n + "_type"] = row.querySelector('.bd-type').value;
+    payload["breakdown" + n + "_reason"] = row.querySelector('.bd-reason').value;
+    payload["breakdown" + n + "_min"] = row.querySelector('.bd-duration').value;
+  });
 
   if(!payload.shift || !payload.machine || !payload.item){
     statusEl.textContent = 'Please fill Shift, Machine name and Item name before submitting.';
@@ -441,6 +445,7 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     return;
   }
 
+  submitBtn.disabled = true;
   statusEl.textContent = 'Submitting...';
   statusEl.style.color = '#6b6558';
 
@@ -453,11 +458,37 @@ document.getElementById('submitBtn').addEventListener('click', function(){
   }).then(() => {
     statusEl.textContent = 'Entry submitted.';
     statusEl.style.color = '#2f6f4e';
+    resetForm();
+    submitBtn.disabled = false;
   }).catch(() => {
     statusEl.textContent = 'Submitted (response not confirmed — check your sheet).';
     statusEl.style.color = '#6b6558';
+    resetForm();
+    submitBtn.disabled = false;
   });
 });
+
+function resetForm(){
+  document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f_shift').value = '';
+  document.getElementById('f_machine').value = '';
+  document.getElementById('f_item').value = '';
+  document.getElementById('f_sku').value = '';
+  document.getElementById('f_group').value = '';
+  document.getElementById('f_capacity').value = '';
+  document.getElementById('f_ct').value = '';
+  document.getElementById('f_cavity').value = '';
+  document.getElementById('f_shifttime').value = 660;
+  document.getElementById('f_planned').value = 0;
+  document.getElementById('f_produced').value = 0;
+  document.getElementById('f_reject').value = 0;
+  document.querySelectorAll('.bd-row').forEach(row => {
+    row.querySelector('.bd-reason').value = '';
+    row.querySelector('.bd-type').value = '';
+    row.querySelector('.bd-duration').value = 0;
+  });
+  recalc();
+}
 </script>
 
 </body>
