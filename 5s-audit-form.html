@@ -455,11 +455,50 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
 
   // Collect all form data
   const formData = new FormData(form);
+  const rawData = {};
+  formData.forEach((value, key) => { rawData[key] = value; });
+
+  const FIELD_LABELS = {
+    email: "Email",
+    floor: "Floor / Area",
+    auditor: "Auditor Name",
+    date: "Audit Date",
+    shift: "Shift",
+    s_1_1: "1.1 Unnecessary items, scrap, or obsolete materials are absent from the work area",
+    s_1_1_note: "1.1 Remarks",
+    s_1_2: "1.2 Red-tag / disposal process is actively used for flagged items",
+    s_1_2_note: "1.2 Remarks",
+    s_1_3: "1.3 Walkways, aisles, and fire exits are free of clutter and obstructions",
+    s_1_3_note: "1.3 Remarks",
+    s_2_1: "2.1 Tools, jigs, and fixtures have clearly labelled, dedicated storage locations",
+    s_2_1_note: "2.1 Remarks",
+    s_2_2: "2.2 Floor markings (lanes, WIP zones, hazard areas) are visible and followed",
+    s_2_2_note: "2.2 Remarks",
+    s_2_3: "2.3 Materials and WIP are stored at point of use in correct sequence",
+    s_2_3_note: "2.3 Remarks",
+    s_3_1: "3.1 Machines and workstations are free of dust, oil leaks, and debris",
+    s_3_1_note: "3.1 Remarks",
+    s_3_2: "3.2 A cleaning schedule/checklist is displayed and being followed",
+    s_3_2_note: "3.2 Remarks",
+    s_4_1: "4.1 Visual standards (SOPs, labels, colour codes) are posted and current",
+    s_4_1_note: "4.1 Remarks",
+    s_4_2: "4.2 Previous audit findings have documented corrective actions with owners",
+    s_4_2_note: "4.2 Remarks",
+    s_5_1: "5.1 Operators can explain 5S standards for their own workstation",
+    s_5_1_note: "5.1 Remarks",
+    s_5_2: "5.2 Daily/weekly 5S audits are conducted per schedule with no lapses",
+    s_5_2_note: "5.2 Remarks",
+    overall: "Overall Auditor Comments"
+  };
+
   const data = {};
-  formData.forEach((value, key) => { data[key] = value; });
-  data.total = total;
-  data.max = max;
-  data.percent = pct;
+  Object.keys(rawData).forEach(key => {
+    const label = FIELD_LABELS[key] || key;
+    data[label] = rawData[key];
+  });
+  data["Total Score"] = total;
+  data["Max Score"] = max;
+  data["Score %"] = pct;
   data.sheet = "5S Form";
 
   btn.disabled = true;
@@ -477,9 +516,10 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
   .then(() => {
     summary.textContent = `Submitted successfully — Score: ${total}/${max} points (${pct}%).`;
     summary.style.color = "var(--accent-dark)";
-    btn.textContent = "Submitted ✓";
     form.reset();
     document.querySelectorAll('.score-pill input, .radio-pill input').forEach(i => i.checked = false);
+    btn.disabled = false;
+    btn.textContent = "Submit Audit";
   })
   .catch(() => {
     summary.textContent = "Something went wrong submitting the audit. Please try again.";
