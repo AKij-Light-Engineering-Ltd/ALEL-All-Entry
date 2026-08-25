@@ -91,8 +91,8 @@
       </div>
     </div>
     <div class="row">
-      <div class="field"><label>Machine name</label><input list="machineList" id="f_machine" placeholder="e.g. A-1"></div>
-      <div class="field"><label>Item name</label><input list="itemList" id="f_item" placeholder="Start typing..."></div>
+      <div class="field"><label>Machine name</label><select id="f_machine"><option value="">Choose</option></select></div>
+      <div class="field"><label>Item name</label><select id="f_item"><option value="">Choose</option></select></div>
     </div>
   </div>
 
@@ -157,9 +157,6 @@
   <p class="status-msg" id="statusMsg"></p>
 
 </div>
-
-<datalist id="machineList"></datalist>
-<datalist id="itemList"></datalist>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -272,11 +269,11 @@ const MECHANICAL_BD = ["Hydraulic oil leakage","Hydraulic pump failure/noise","T
 
 document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
 
-const machineListEl = document.getElementById('machineList');
-MACHINES.forEach(m => { const o=document.createElement('option'); o.value=m; machineListEl.appendChild(o); });
+const machineSelectEl = document.getElementById('f_machine');
+MACHINES.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; machineSelectEl.appendChild(o); });
 
-const itemListEl = document.getElementById('itemList');
-ITEMS.forEach(it => { const o=document.createElement('option'); o.value=it.name; itemListEl.appendChild(o); });
+const itemSelectEl = document.getElementById('f_item');
+ITEMS.forEach(it => { const o=document.createElement('option'); o.value=it.name; o.textContent=it.name; itemSelectEl.appendChild(o); });
 
 function capacityFor(item){
   return Math.round((3600/item.ct)*item.cvt);
