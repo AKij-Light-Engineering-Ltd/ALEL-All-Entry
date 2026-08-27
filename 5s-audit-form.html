@@ -434,6 +434,14 @@
 // Paste the Web App URL you get after deploying the Apps Script here:
 const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz_92oalEw3YEloH-9wEQ7irO4lslh9kr25_gylP9JmXr5CMpYAA0bJtozHZUpMf_uF/exec";
 
+// Pre-fill Floor / Area from the ?line= parameter passed by the ALEL All Entry hub
+const urlParams = new URLSearchParams(window.location.search);
+const preLine = urlParams.get('line');
+if(preLine){
+  const floorSelect = document.getElementById('floor');
+  if(floorSelect){ floorSelect.value = preLine; }
+}
+
 document.getElementById('auditForm').addEventListener('submit', function(e){
   e.preventDefault();
 
