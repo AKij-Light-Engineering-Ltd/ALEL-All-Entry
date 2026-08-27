@@ -32,6 +32,21 @@
   .field input:disabled{background:#f1efe6;color:var(--muted);}
   .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .field.auto label::after{content:" (auto)";color:var(--accent);font-size:10px;}
+  .field.combo{position:relative;}
+  .combo-list{
+    position:absolute;top:100%;left:0;right:0;background:#fff;
+    border:1px solid var(--line);border-top:none;border-radius:0 0 6px 6px;
+    max-height:220px;overflow-y:auto;z-index:50;display:none;
+    box-shadow:0 6px 14px rgba(0,0,0,.1);
+  }
+  .combo-list.open{display:block;}
+  .combo-item{padding:9px 10px;font-size:13.5px;cursor:pointer;border-bottom:1px solid #f1efe6;}
+  .combo-item:last-child{border-bottom:none;}
+  .combo-item:hover{background:#f1efe6;}
+  .combo-item.none{color:var(--muted);font-style:italic;cursor:default;}
+  .combo-item.none:hover{background:none;}
+
+  .field input:disabled{background:#f1efe6;color:var(--muted);cursor:not-allowed;}
 
   .bd-row{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:#fdfcf9;}
   .bd-row .row{margin-bottom:8px;}
@@ -55,7 +70,10 @@
   .cap-row{display:flex;justify-content:space-between;font-size:13px;margin:6px 0;}
   .cap-row .l{color:var(--muted);}
   .cap-bar-track{height:10px;border-radius:5px;background:#e4e0d2;overflow:hidden;margin-top:4px;}
-  .cap-bar-fill{height:100%;background:var(--accent);border-radius:5px;transition:width .2s;}
+  .cap-bar-fill{height:100%;background:var(--accent);border-radius:5px;transition:width .2s, background .2s;}
+  .cap-status{margin:8px 0 0;font-size:12.5px;font-weight:700;text-align:center;padding:6px 8px;border-radius:6px;display:none;}
+  .cap-status.over{display:block;background:#fbe9e3;color:var(--bad);}
+  .cap-status.under{display:block;background:#eef6f0;color:var(--accent-dark);}
 
   .submit-btn{
     width:100%;background:var(--accent);color:#fff;border:none;padding:14px;
@@ -91,8 +109,8 @@
       </div>
     </div>
     <div class="row">
-      <div class="field"><label>Machine name</label><select id="f_machine"><option value="">Choose</option></select></div>
-      <div class="field"><label>Item name</label><select id="f_item"><option value="">Choose</option></select></div>
+      <div class="field combo"><label>Machine name</label><input type="text" id="f_machine" class="combo-input" autocomplete="off" placeholder="Type to search..."><div class="combo-list" id="f_machine_list"></div></div>
+      <div class="field combo"><label>Item name</label><input type="text" id="f_item" class="combo-input" autocomplete="off" placeholder="Type to search..."><div class="combo-list" id="f_item_list"></div></div>
     </div>
   </div>
 
@@ -117,9 +135,31 @@
       <div class="field auto"><label>Shift time (Min)</label><input type="number" id="f_shifttime" value="660"></div>
       <div class="field"><label>Planned downtime (Min)</label><input type="number" id="f_planned" value="0" min="0"></div>
     </div>
+    <div class="row single">
+      <div class="field"><label>Planned downtime reason</label><input type="text" id="f_planned_reason" placeholder="Enter reason if downtime > 0" disabled></div>
+    </div>
     <div class="row">
       <div class="field"><label>Total produced qty (Pcs)</label><input type="number" id="f_produced" value="0" min="0"></div>
       <div class="field"><label>Reject qty (Pcs)</label><input type="number" id="f_reject" value="0" min="0"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Non-productive time (NPT)</h2>
+    <div class="row">
+      <div class="field"><label>Unavailable order (Min)</label><input type="number" id="npt_unavailable_order" value="0" min="0"></div>
+      <div class="field"><label>Utility (Gas) (Min)</label><input type="number" id="npt_utility_gas" value="0" min="0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Manpower shortage (Min)</label><input type="number" id="npt_manpower_shortage" value="0" min="0"></div>
+      <div class="field"><label>QCO (Quick change over) (Min)</label><input type="number" id="npt_qco" value="0" min="0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>RM shortage (Min)</label><input type="number" id="npt_rm_shortage" value="0" min="0"></div>
+      <div class="field"><label>Warehouse block (Min)</label><input type="number" id="npt_warehouse_block" value="0" min="0"></div>
+    </div>
+    <div class="row single">
+      <div class="field"><label>Others (Min)</label><input type="number" id="npt_others" value="0" min="0"></div>
     </div>
   </div>
 
@@ -151,6 +191,7 @@
     <div class="cap-row"><span class="l">Entered produced qty</span><span id="capActual">0 pcs</span></div>
     <div class="cap-row"><span class="l">Achievement</span><span id="capAch">0%</span></div>
     <div class="cap-bar-track"><div class="cap-bar-fill" id="capBar" style="width:0%"></div></div>
+    <p id="capStatus" class="cap-status"></p>
   </div>
 
   <button class="submit-btn" id="submitBtn" type="button">Submit entry</button>
@@ -269,19 +310,53 @@ const MECHANICAL_BD = ["Hydraulic oil leakage","Hydraulic pump failure/noise","T
 
 document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
 
-const machineSelectEl = document.getElementById('f_machine');
-MACHINES.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; machineSelectEl.appendChild(o); });
-
-const itemSelectEl = document.getElementById('f_item');
-ITEMS.forEach(it => { const o=document.createElement('option'); o.value=it.name; o.textContent=it.name; itemSelectEl.appendChild(o); });
-
 function capacityFor(item){
   return Math.round((3600/item.ct)*item.cvt);
 }
 
-document.getElementById('f_item').addEventListener('change', function(){
-  const match = ITEMS.find(it => it.name === this.value);
-  if(!match) return;
+function setupCombo(inputId, listId, options, getLabel, onSelect){
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+
+  function render(filter){
+    const f = (filter || '').toLowerCase();
+    const matches = options.filter(o => getLabel(o).toLowerCase().includes(f));
+    list.innerHTML = '';
+    if(matches.length === 0){
+      const div = document.createElement('div');
+      div.className = 'combo-item none';
+      div.textContent = 'No matches';
+      list.appendChild(div);
+    } else {
+      matches.slice(0, 150).forEach(o => {
+        const div = document.createElement('div');
+        div.className = 'combo-item';
+        div.textContent = getLabel(o);
+        div.addEventListener('mousedown', function(e){
+          e.preventDefault();
+          input.value = getLabel(o);
+          list.classList.remove('open');
+          if(onSelect) onSelect(o);
+        });
+        list.appendChild(div);
+      });
+    }
+    list.classList.add('open');
+  }
+
+  input.addEventListener('focus', () => render(input.value));
+  input.addEventListener('input', () => render(input.value));
+  input.addEventListener('blur', () => { setTimeout(() => list.classList.remove('open'), 150); });
+  document.addEventListener('click', (e) => {
+    if(e.target !== input && !list.contains(e.target)){
+      list.classList.remove('open');
+    }
+  });
+}
+
+setupCombo('f_machine', 'f_machine_list', MACHINES, m => m, null);
+
+setupCombo('f_item', 'f_item_list', ITEMS, it => it.name, function(match){
   document.getElementById('f_sku').value = match.code;
   document.getElementById('f_group').value = match.group;
   document.getElementById('f_capacity').value = capacityFor(match) + " pcs/hr";
@@ -307,7 +382,12 @@ function buildBdRows(){
         <div class="field"><label>Breakdown ${i} — reason</label>
           <select class="bd-reason">
             <option value="" selected>None</option>
-            ${ALL_REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+            <optgroup label="Electrical">
+              ${ELECTRICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
+            </optgroup>
+            <optgroup label="Mechanical">
+              ${MECHANICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
+            </optgroup>
           </select>
         </div>
       </div>
@@ -358,11 +438,15 @@ function recalc(){
   const capacityText = document.getElementById('f_capacity').value;
   const capacity = parseFloat(capacityText) || 0;
 
+  const NPT_IDS = ['npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'];
+  let nptMinutes = 0;
+  NPT_IDS.forEach(id => { nptMinutes += parseFloat(document.getElementById(id).value) || 0; });
+
   let bdMinutes = 0;
   document.querySelectorAll('.bd-duration').forEach(el => { bdMinutes += parseFloat(el.value) || 0; });
 
   const plannedProdTime = Math.max(0, shiftTime - planned);
-  const runTime = Math.max(0, plannedProdTime - bdMinutes);
+  const runTime = Math.max(0, plannedProdTime - nptMinutes - bdMinutes);
 
   const availability = plannedProdTime > 0 ? runTime / plannedProdTime : 0;
 
@@ -390,11 +474,46 @@ function recalc(){
   const ach = target > 0 ? Math.round((produced/target)*100) : 0;
   document.getElementById('capAch').textContent = ach + '%';
   document.getElementById('capBar').style.width = Math.min(100, ach) + '%';
+
+  const capAchEl = document.getElementById('capAch');
+  const capBarEl = document.getElementById('capBar');
+  const capStatusEl = document.getElementById('capStatus');
+
+  if(target > 0 && produced > target){
+    const overBy = Math.round(((produced - target) / target) * 100);
+    capAchEl.style.color = 'var(--bad)';
+    capBarEl.style.background = 'var(--bad)';
+    capStatusEl.className = 'cap-status over';
+    capStatusEl.textContent = '⚠ Production is ' + overBy + '% above shift target (' + Math.round(produced - target) + ' pcs over).';
+  } else if(target > 0 && produced === target){
+    capAchEl.style.color = 'var(--accent-dark)';
+    capBarEl.style.background = 'var(--accent)';
+    capStatusEl.className = 'cap-status under';
+    capStatusEl.textContent = '✓ Exactly on shift target.';
+  } else {
+    capAchEl.style.color = 'var(--ink)';
+    capBarEl.style.background = 'var(--accent)';
+    capStatusEl.className = 'cap-status';
+    capStatusEl.textContent = '';
+  }
 }
 
-['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_cavity'].forEach(id => {
+['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_cavity','npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalc);
 });
+
+function togglePlannedReason(){
+  const plannedVal = parseFloat(document.getElementById('f_planned').value) || 0;
+  const reasonField = document.getElementById('f_planned_reason');
+  if(plannedVal > 0){
+    reasonField.disabled = false;
+  } else {
+    reasonField.disabled = true;
+    reasonField.value = '';
+  }
+}
+document.getElementById('f_planned').addEventListener('input', togglePlannedReason);
+togglePlannedReason();
 
 recalc();
 
@@ -415,12 +534,16 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     cavity: document.getElementById('f_cavity').value,
     shiftTimeMin: document.getElementById('f_shifttime').value,
     plannedDowntimeMin: document.getElementById('f_planned').value,
+    plannedDowntimeReason: document.getElementById('f_planned_reason').value,
     producedQty: document.getElementById('f_produced').value,
     rejectQty: document.getElementById('f_reject').value,
-    oeePercent: document.getElementById('oeeNum').textContent,
-    availability: document.getElementById('mAvail').textContent,
-    performance: document.getElementById('mPerf').textContent,
-    quality: document.getElementById('mQual').textContent
+    npt_unavailableOrderMin: document.getElementById('npt_unavailable_order').value,
+    npt_utilityGasMin: document.getElementById('npt_utility_gas').value,
+    npt_manpowerShortageMin: document.getElementById('npt_manpower_shortage').value,
+    npt_qcoMin: document.getElementById('npt_qco').value,
+    npt_rmShortageMin: document.getElementById('npt_rm_shortage').value,
+    npt_warehouseBlockMin: document.getElementById('npt_warehouse_block').value,
+    npt_othersMin: document.getElementById('npt_others').value
   };
 
   document.querySelectorAll('.bd-row').forEach((row, i) => {
@@ -430,8 +553,19 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     payload["breakdown" + n + "_min"] = row.querySelector('.bd-duration').value;
   });
 
+  payload.oeePercent = document.getElementById('oeeNum').textContent;
+  payload.availability = document.getElementById('mAvail').textContent;
+  payload.performance = document.getElementById('mPerf').textContent;
+  payload.quality = document.getElementById('mQual').textContent;
+
   if(!payload.shift || !payload.machine || !payload.item){
     statusEl.textContent = 'Please fill Shift, Machine name and Item name before submitting.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  if((parseFloat(payload.plannedDowntimeMin) || 0) > 0 && !payload.plannedDowntimeReason.trim()){
+    statusEl.textContent = 'Please enter a Planned downtime reason since downtime minutes were entered.';
     statusEl.style.color = '#b3401e';
     return;
   }
@@ -477,8 +611,13 @@ function resetForm(){
   document.getElementById('f_cavity').value = '';
   document.getElementById('f_shifttime').value = 660;
   document.getElementById('f_planned').value = 0;
+  document.getElementById('f_planned_reason').value = '';
+  document.getElementById('f_planned_reason').disabled = true;
   document.getElementById('f_produced').value = 0;
   document.getElementById('f_reject').value = 0;
+  ['npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
+    document.getElementById(id).value = 0;
+  });
   document.querySelectorAll('.bd-row').forEach(row => {
     row.querySelector('.bd-reason').value = '';
     row.querySelector('.bd-type').value = '';
