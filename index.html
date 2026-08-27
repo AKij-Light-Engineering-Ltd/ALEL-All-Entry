@@ -379,7 +379,10 @@
       alert(title + ' is not linked yet. Add its live form URL in the HTML (data-url attribute) once it is published.');
       return;
     }
-    window.open(url, '_blank');
+    const select = card.querySelector('.line-select');
+    const line = select ? select.value : '';
+    const finalUrl = line ? (url + (url.includes('?') ? '&' : '?') + 'line=' + encodeURIComponent(line)) : url;
+    window.open(finalUrl, '_blank');
   }
 
   document.querySelectorAll('.entry-card').forEach(card => {
