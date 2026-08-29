@@ -58,6 +58,23 @@
   .oee-hero{text-align:center;padding:6px 0 4px;}
   .oee-hero .num{font-size:44px;font-weight:700;color:var(--accent-dark);line-height:1;}
   .oee-hero .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+  .oee-badge{display:inline-block;margin-top:10px;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;background:#f1efe6;color:var(--muted);}
+  .oee-badge.world-class{background:#e4f3ea;color:#1d7a4c;}
+  .oee-badge.good{background:#eaf1fb;color:#2a5fa8;}
+  .oee-badge.average{background:#fdf2df;color:#a5710e;}
+  .oee-badge.low{background:#fbe9e3;color:var(--bad);}
+  .oee-benchmark-note{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.4;}
+  .waterfall{display:flex;flex-direction:column;gap:0;}
+  .wf-row{display:flex;justify-content:space-between;align-items:center;padding:7px 4px;font-size:13px;border-bottom:1px dashed var(--line);}
+  .wf-row:last-child{border-bottom:none;}
+  .wf-label{color:var(--muted);}
+  .wf-val{font-weight:700;font-variant-numeric:tabular-nums;}
+  .wf-total .wf-label, .wf-total .wf-val{color:var(--ink);font-weight:700;}
+  .wf-loss .wf-label{color:var(--bad);}
+  .wf-loss .wf-val{color:var(--bad);}
+  .wf-sub{background:#f1efe6;border-radius:6px;padding-left:8px;padding-right:8px;margin:2px 0;}
+  .wf-final{background:#eef6f0;border-radius:6px;padding-left:8px;padding-right:8px;margin-top:2px;}
+  .wf-final .wf-label, .wf-final .wf-val{color:var(--accent-dark);font-weight:700;}
   .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
   .metric{background:#f1efe6;border-radius:8px;padding:10px 8px;text-align:center;}
   .metric .v{font-size:18px;font-weight:700;}
@@ -116,12 +133,46 @@
     </div>
     <div class="row">
       <div class="field auto"><label>Production capacity (Pcs/Hr)</label><input type="text" id="f_capacity" disabled></div>
-      <div class="field"><label>Running cycle time (Sec)</label><input type="number" id="f_ct" step="0.1"></div>
+      <div class="field"><label>Standard cycle time (Sec)</label><input type="number" id="f_ct" step="0.1"></div>
     </div>
     <div class="row single">
-      <div class="field"><label>Running cavity</label><input type="number" id="f_cavity" min="1"></div>
+      <div class="field"><label>Actual Cavity</label><input type="number" id="f_cavity" min="1"></div>
     </div>
   </div>
+  <div class="card">
+    <h2>Speed &amp; cavity loss (vs standard)
+      <span class="hint">Optional — enter what you actually observed on the floor. All loss values below are calculated automatically and cannot be edited. Authoritative number: "Speed loss — standard formula (Pcs)" below is derived from actual measured Produced qty and is what feeds the official OEE / waterfall calculation. The other values on this card (Product loss due to speed, Cavity loss, Cavity utilization, Total combined) are shop-floor diagnostic estimates based on the single actual cycle time / running cavity figure entered above — useful for root-causing WHY the standard-formula number came out as it did, but they may not reconcile exactly with it if cycle time or cavity varied during the shift, or other minor stops occurred.</span>
+    </h2>
+    <div class="row">
+      <div class="field"><label>Actual running cycle time (Sec)</label><input type="number" id="f_ct_actual" step="0.1" placeholder="Leave blank if same as standard"></div>
+      <div class="field auto"><label>Speed loss (%)</label><input type="text" id="f_speedloss_pct" disabled></div>
+    </div>
+    <div class="row single">
+      <div class="field auto"><label>Product loss due to speed (Pcs)</label><input type="text" id="f_speedloss_qty" disabled>
+        <div class="bd-count" style="text-align:left;margin-top:4px;">Component view (cavity held at standard). If cavity is ALSO running below standard at the same time, don't add this to Cavity loss below — use "Total loss — speed + cavity combined" further down instead, which is the mathematically correct combined figure.</div>
+      </div>
+    </div>
+    <div class="row single">
+      <div class="field auto"><label>Speed loss — standard formula (Pcs)</label><input type="text" id="f_speedloss_official_qty" disabled>
+        <div class="bd-count" style="text-align:left;margin-top:4px;">Official Six Big Losses calculation — uses Produced qty and Run Time only, no manual cycle-time entry needed. Always active, independent of the row above. Note: this figure already includes any loss caused by cavity blockage (see below) — it is not a separate, additive loss.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Running Cavity (this shift)</label><input type="number" id="f_running_cavity" min="1" placeholder="Leave blank if same as Actual Cavity"></div>
+      <div class="field auto"><label>Cavity loss (Pcs)</label><input type="text" id="f_cavityloss_qty" disabled></div>
+    </div>
+    <div class="row single">
+      <div class="field auto"><label>Cavity utilization (%)</label><input type="text" id="f_cavity_util" disabled>
+        <div class="bd-count" style="text-align:left;margin-top:4px;">Diagnostic breakdown only — this and Cavity loss above explain part of the "Speed loss — standard formula" figure; do not add them on top of it when reporting total loss.</div>
+      </div>
+    </div>
+    <div class="row single">
+      <div class="field auto"><label>Total loss — speed + cavity combined (Pcs)</label><input type="text" id="f_combinedloss_qty" disabled>
+        <div class="bd-count" style="text-align:left;margin-top:4px;">Use THIS number whenever cycle time runs slower than standard AND cavity runs below standard in the same shift. It is calculated directly from both actual values together, so it correctly accounts for the overlap between the two — simply adding "Product loss due to speed" + "Cavity loss" would overstate the real loss.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Production numbers</h2>
     <div class="row">
@@ -164,6 +215,8 @@
     <div class="oee-hero">
       <div class="num" id="oeeNum">0%</div>
       <div class="lbl">Overall equipment effectiveness</div>
+      <div class="oee-badge" id="oeeBadge">—</div>
+      <div class="oee-benchmark-note">World-Class OEE benchmark: ≥85% (Availability ≥90% · Performance ≥95% · Quality ≥99%)</div>
     </div>
     <div style="position:relative;height:200px;margin-top:10px;">
       <canvas id="oeeChart" role="img" aria-label="Doughnut chart showing Availability, Performance and Quality contribution to OEE">Availability, Performance, Quality breakdown of OEE.</canvas>
@@ -174,6 +227,24 @@
       <div class="metric"><div class="v" id="mQual">0%</div><div class="l">Quality</div></div>
     </div>
   </div>
+
+  <div class="card">
+    <h2>OEE loss waterfall (Six Big Losses view)
+      <span class="hint">Shift Time reduced step-by-step down to Fully Productive Time — the standard OEE loss-tree used industry-wide (SEMI E10 / OEE.com). All values are calculated automatically from data already entered above.</span>
+    </h2>
+    <div class="waterfall" id="waterfall">
+      <div class="wf-row wf-total"><span class="wf-label">Shift time</span><span class="wf-val" id="wfShift">0 min</span></div>
+      <div class="wf-row wf-loss"><span class="wf-label">− Planned downtime</span><span class="wf-val" id="wfPlanned">0 min</span></div>
+      <div class="wf-row wf-sub"><span class="wf-label">= Planned production time</span><span class="wf-val" id="wfPPT">0 min</span></div>
+      <div class="wf-row wf-loss"><span class="wf-label">− Availability loss (breakdowns + NPT)</span><span class="wf-val" id="wfAvailLoss">0 min</span></div>
+      <div class="wf-row wf-sub"><span class="wf-label">= Run time</span><span class="wf-val" id="wfRunTime">0 min</span></div>
+      <div class="wf-row wf-loss"><span class="wf-label">− Performance loss (speed / minor stops)</span><span class="wf-val" id="wfPerfLoss">0 min</span></div>
+      <div class="wf-row wf-sub"><span class="wf-label">= Net run time</span><span class="wf-val" id="wfNetRun">0 min</span></div>
+      <div class="wf-row wf-loss"><span class="wf-label">− Quality loss (rejects, time-equivalent)</span><span class="wf-val" id="wfQualLoss">0 min</span></div>
+      <div class="wf-row wf-final"><span class="wf-label">= Fully productive time</span><span class="wf-val" id="wfFPT">0 min</span></div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Shift capacity vs time</h2>
     <div class="cap-row"><span class="l">Planned production time</span><span id="capPPT">0 min</span></div>
@@ -340,8 +411,19 @@ setupCombo('f_item', 'f_item_list', ITEMS, it => it.name, function(match){
   document.getElementById('f_group').value = match.group;
   document.getElementById('f_capacity').value = capacityFor(match) + " pcs/hr";
   document.getElementById('f_ct').value = match.ct;
+  document.getElementById('f_ct').disabled = true; // lock standard cycle time once it's auto-filled from the item master
   document.getElementById('f_cavity').value = match.cvt;
+  document.getElementById('f_cavity').disabled = true; // lock actual cavity once it's auto-filled from the item master
   recalc();
+});
+// If the typed item name doesn't match anything in the master (a new/unlisted
+// item), unlock standard cycle time and actual cavity so they can still be entered manually.
+document.getElementById('f_item').addEventListener('input', function(){
+  const match = ITEMS.find(it => it.name === this.value);
+  if(!match){
+    document.getElementById('f_ct').disabled = false;
+    document.getElementById('f_cavity').disabled = false;
+  }
 });
 
 const bdContainer = document.getElementById('bdContainer');
@@ -472,9 +554,123 @@ function recalc(){
     capStatusEl.className = 'cap-status';
     capStatusEl.textContent = '';
   }
+
+  // ---- Speed loss (auto, read-only — does not affect OEE numbers above) ----
+  const ctActual = parseFloat(document.getElementById('f_ct_actual').value) || 0;
+  const speedPctEl = document.getElementById('f_speedloss_pct');
+  const speedQtyEl = document.getElementById('f_speedloss_qty');
+  if(ctActual > 0 && ct > 0 && cavity > 0){
+    const speedLossPct = Math.max(0, ((ctActual - ct) / ct) * 100);
+    const idealPerPieceStandard = ct / cavity;
+    const idealPerPieceActual = ctActual / cavity;
+    const maxAtStandard = idealPerPieceStandard > 0 ? (runTime * 60) / idealPerPieceStandard : 0;
+    const maxAtActual = idealPerPieceActual > 0 ? (runTime * 60) / idealPerPieceActual : 0;
+    const speedLossQty = Math.max(0, Math.round(maxAtStandard - maxAtActual));
+    speedPctEl.value = speedLossPct.toFixed(1) + '%';
+    speedQtyEl.value = speedLossQty + ' pcs';
+  } else {
+    speedPctEl.value = '0%';
+    speedQtyEl.value = '0 pcs';
+  }
+
+  // ---- Cavity loss (auto, read-only) ----
+  // If Running Cavity (actually running this shift) is left blank, assume it
+  // equals Actual Cavity (no blockage) — no edit required in that case.
+  const runningCavityInput = parseFloat(document.getElementById('f_running_cavity').value) || 0;
+  const runningCavity = runningCavityInput > 0 ? runningCavityInput : cavity;
+  const cavityLossQtyEl = document.getElementById('f_cavityloss_qty');
+  const cavityUtilEl = document.getElementById('f_cavity_util');
+  if(ct > 0 && cavity > 0 && runningCavity > 0 && runningCavity < cavity){
+    const idealPerPieceFullCavity = ct / cavity;
+    const idealPerPieceRunningCavity = ct / runningCavity;
+    const maxAtFullCavity = idealPerPieceFullCavity > 0 ? (runTime * 60) / idealPerPieceFullCavity : 0;
+    const maxAtRunningCavity = idealPerPieceRunningCavity > 0 ? (runTime * 60) / idealPerPieceRunningCavity : 0;
+    const cavityLossQty = Math.max(0, Math.round(maxAtFullCavity - maxAtRunningCavity));
+    cavityLossQtyEl.value = cavityLossQty + ' pcs';
+  } else {
+    cavityLossQtyEl.value = '0 pcs';
+  }
+  if(cavity > 0){
+    const cavityUtilPct = Math.max(0, Math.min(100, (runningCavity / cavity) * 100));
+    cavityUtilEl.value = cavityUtilPct.toFixed(1) + '%';
+  } else {
+    cavityUtilEl.value = '0%';
+  }
+
+  // ---- Combined loss when BOTH cycle time and cavity deviate from standard at
+  // once ----
+  // Simply adding "Product loss due to speed" (which assumes cavity = standard)
+  // and "Cavity loss" (which assumes cycle time = standard) double-counts the
+  // overlap between the two effects. The correct combined figure compares the
+  // theoretical max at standard (ct, cavity) directly against the theoretical
+  // max using BOTH actual values (ctActual, runningCavity) together.
+  const combinedLossQtyEl = document.getElementById('f_combinedloss_qty');
+  const ctForCombined = ctActual > 0 ? ctActual : ct;
+  if(ct > 0 && cavity > 0 && ctForCombined > 0 && runningCavity > 0){
+    const maxAtStandardBoth = (runTime * 60) / (ct / cavity);
+    const maxAtActualBoth = (runTime * 60) / (ctForCombined / runningCavity);
+    const combinedLossQty = Math.max(0, Math.round(maxAtStandardBoth - maxAtActualBoth));
+    combinedLossQtyEl.value = combinedLossQty + ' pcs';
+  } else {
+    combinedLossQtyEl.value = '0 pcs';
+  }
+
+  // ---- Speed loss, official Six Big Losses formula (auto, read-only) ----
+  // Speed Loss (units) = (Run Time / Standard Ideal Cycle Time) - Produced Qty
+  // Uses only data already in the form (produced, runTime, idealCycleSec from
+  // the standard cycle time above) — no manual actual-cycle-time entry needed.
+  const speedOfficialQtyEl = document.getElementById('f_speedloss_official_qty');
+  if(idealCycleSec > 0){
+    const theoreticalMaxAtStandard = (runTime * 60) / idealCycleSec;
+    const officialSpeedLossQty = Math.max(0, Math.round(theoreticalMaxAtStandard - produced));
+    speedOfficialQtyEl.value = officialSpeedLossQty + ' pcs';
+  } else {
+    speedOfficialQtyEl.value = '0 pcs';
+  }
+
+  // ---- OEE loss waterfall (Shift Time -> Fully Productive Time) ----
+  // Standard OEE loss-tree (SEMI E10 / OEE.com): each stage subtracts one
+  // category of loss. The final Fully Productive Time / Shift Time ratio
+  // is mathematically identical to Availability x Performance x Quality —
+  // this is purely a different, standard presentation of the same numbers.
+  const availabilityLossMin = nptMinutes + bdMinutes;
+  const netRunTimeMin = idealCycleSec > 0 ? (produced * idealCycleSec) / 60 : runTime;
+  const performanceLossMin = Math.max(0, runTime - netRunTimeMin);
+  const fullyProductiveTimeMin = idealCycleSec > 0 ? Math.max(0, ((produced - reject) * idealCycleSec) / 60) : 0;
+  const qualityLossMin = Math.max(0, netRunTimeMin - fullyProductiveTimeMin);
+
+  document.getElementById('wfShift').textContent = Math.round(shiftTime) + ' min';
+  document.getElementById('wfPlanned').textContent = Math.round(planned) + ' min';
+  document.getElementById('wfPPT').textContent = Math.round(plannedProdTime) + ' min';
+  document.getElementById('wfAvailLoss').textContent = Math.round(availabilityLossMin) + ' min';
+  document.getElementById('wfRunTime').textContent = Math.round(runTime) + ' min';
+  document.getElementById('wfPerfLoss').textContent = Math.round(performanceLossMin) + ' min';
+  document.getElementById('wfNetRun').textContent = Math.round(netRunTimeMin) + ' min';
+  document.getElementById('wfQualLoss').textContent = Math.round(qualityLossMin) + ' min';
+  document.getElementById('wfFPT').textContent = Math.round(fullyProductiveTimeMin) + ' min';
+
+  // ---- World-Class OEE benchmark badge (industry-standard reference range) ----
+  const oeeBadgeEl = document.getElementById('oeeBadge');
+  const oeePctVal = oee * 100;
+  oeeBadgeEl.className = 'oee-badge';
+  if(shiftTime === 0 && produced === 0){
+    oeeBadgeEl.textContent = '—';
+  } else if(oeePctVal >= 85){
+    oeeBadgeEl.classList.add('world-class');
+    oeeBadgeEl.textContent = '★ World Class';
+  } else if(oeePctVal >= 60){
+    oeeBadgeEl.classList.add('good');
+    oeeBadgeEl.textContent = 'Typical / Acceptable';
+  } else if(oeePctVal >= 40){
+    oeeBadgeEl.classList.add('average');
+    oeeBadgeEl.textContent = 'Below average';
+  } else {
+    oeeBadgeEl.classList.add('low');
+    oeeBadgeEl.textContent = 'Needs improvement';
+  }
 }
 
-['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_cavity','npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
+['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_ct_actual','f_cavity','f_running_cavity','npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalc);
 });
 
@@ -519,7 +715,15 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     npt_qcoMin: document.getElementById('npt_qco').value,
     npt_rmShortageMin: document.getElementById('npt_rm_shortage').value,
     npt_warehouseBlockMin: document.getElementById('npt_warehouse_block').value,
-    npt_othersMin: document.getElementById('npt_others').value
+    npt_othersMin: document.getElementById('npt_others').value,
+    actualCycleTimeSec: document.getElementById('f_ct_actual').value,
+    speedLossPercent: document.getElementById('f_speedloss_pct').value,
+    speedLossQtyPcs: document.getElementById('f_speedloss_qty').value,
+    speedLossOfficialQtyPcs: document.getElementById('f_speedloss_official_qty').value,
+    runningCavity: document.getElementById('f_running_cavity').value,
+    cavityLossQtyPcs: document.getElementById('f_cavityloss_qty').value,
+    cavityUtilizationPercent: document.getElementById('f_cavity_util').value,
+    combinedSpeedCavityLossQtyPcs: document.getElementById('f_combinedloss_qty').value
   };
 
   document.querySelectorAll('.bd-row').forEach((row, i) => {
@@ -542,6 +746,18 @@ document.getElementById('submitBtn').addEventListener('click', function(){
 
   if((parseFloat(payload.plannedDowntimeMin) || 0) > 0 && !payload.plannedDowntimeReason.trim()){
     statusEl.textContent = 'Please enter a Planned downtime reason since downtime minutes were entered.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  if((parseFloat(payload.rejectQty) || 0) > (parseFloat(payload.producedQty) || 0)){
+    statusEl.textContent = 'Reject qty cannot be more than Total produced qty. Please check the numbers.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  if((parseFloat(payload.runningCavity) || 0) > (parseFloat(payload.cavity) || 0)){
+    statusEl.textContent = 'Running Cavity cannot be more than Actual Cavity. Please check the numbers.';
     statusEl.style.color = '#b3401e';
     return;
   }
@@ -584,7 +800,13 @@ function resetForm(){
   document.getElementById('f_group').value = '';
   document.getElementById('f_capacity').value = '';
   document.getElementById('f_ct').value = '';
+  document.getElementById('f_ct').disabled = false;
+  document.getElementById('f_ct_actual').value = '';
   document.getElementById('f_cavity').value = '';
+  document.getElementById('f_cavity').disabled = false;
+  document.getElementById('f_running_cavity').value = '';
+  document.getElementById('f_cavity_util').value = '';
+  document.getElementById('f_combinedloss_qty').value = '';
   document.getElementById('f_shifttime').value = 660;
   document.getElementById('f_planned').value = 0;
   document.getElementById('f_planned_reason').value = '';
