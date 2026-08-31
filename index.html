@@ -38,7 +38,6 @@
   }
   .header h1{margin:0 0 10px;font-size:30px;line-height:1.25;}
   .header p{margin:0;font-size:14px;line-height:1.6;opacity:.9;max-width:640px;}
-
   .section-label{
     margin:30px 0 16px;
     font-size:13px;
@@ -52,7 +51,6 @@
     font-size:13px;
     color:var(--muted);
   }
-
   .grid{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -61,7 +59,6 @@
   @media (max-width:620px){
     .grid{grid-template-columns:1fr;}
   }
-
   .entry-card{
     background:var(--card);
     border:1px solid var(--line);
@@ -79,7 +76,6 @@
   }
   .entry-title{font-size:15px;font-weight:700;margin:0 0 4px;}
   .entry-desc{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0;}
-
   .entry-select-row{display:flex;gap:8px;align-items:center;}
   select.line-select{
     flex:1;
@@ -104,7 +100,28 @@
   }
   .choose-btn:hover{text-decoration:underline;}
   .choose-btn:disabled{color:var(--line);cursor:not-allowed;}
-
+  .sub-option-row{display:flex;gap:8px;}
+  .sub-option-btn{
+    flex:1;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:10px 8px;
+    font-size:13px;
+    font-weight:700;
+    border-radius:6px;
+    cursor:pointer;
+    text-align:center;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .sub-option-btn:hover{background:var(--accent-dark);}
+  .sub-option-btn.secondary{
+    background:#fdfcf9;
+    color:var(--accent-dark);
+    border:1px solid var(--line);
+  }
+  .sub-option-btn.secondary:hover{background:#f0ede2;}
   .quick-open-row{
     text-align:center;
     margin-top:36px;
@@ -126,7 +143,6 @@
     font-size:12px;
     color:var(--muted);
   }
-
   .signature{
     text-align:center;
     font-size:11.5px;
@@ -136,7 +152,6 @@
 </style>
 </head>
 <body>
-
 <div class="header">
   <div class="header-inner">
     <div class="eyebrow">Operational Excellence — All Entry</div>
@@ -144,11 +159,9 @@
     <p>Select an entry type from any dropdown below to open its form. One interface for all ALEL (IMM / GSS / LED / HAP) daily operations entry.</p>
   </div>
 </div>
-
 <div class="wrap">
   <div class="section-label">Entry Forms</div>
   <div class="section-sub">Choose an option inside a dropdown to open that entry form in a new tab.</div>
-
   <div class="grid" id="cardGrid">
     <!-- 5S Form -->
     <div class="entry-card" data-title="5S Form" data-url="https://marufhossain2707.github.io/ALEL-All-Entry/5s-audit-form.html">
@@ -170,28 +183,20 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- OEE Entry -->
-    <div class="entry-card" data-title="OEE Entry" data-url="https://marufhossain2707.github.io/ALEL-All-Entry/oee-entry.html">
+    <div class="entry-card" data-title="OEE Entry">
       <div class="entry-top">
         <div class="badge" style="background:#2f8f8f;">OE</div>
         <div>
           <p class="entry-title">OEE Entry</p>
-          <p class="entry-desc">IMM OEE input with live preview, NPT &amp; breakdown logging, item master and data log export (local).</p>
+          <p class="entry-desc">IMM OEE input with live preview, NPT &amp; breakdown logging, item master, and QC verification review.</p>
         </div>
       </div>
-      <div class="entry-select-row">
-        <select class="line-select">
-          <option value="">Choose</option>
-          <option value="IMM">IMM</option>
-          <option value="GSS">GSS</option>
-          <option value="LED">LED</option>
-          <option value="HAP">HAP</option>
-        </select>
-        <button class="choose-btn" type="button">Open →</button>
+      <div class="sub-option-row">
+        <a class="sub-option-btn" href="https://marufhossain2707.github.io/ALEL-All-Entry/oee-entry.html" target="_blank" rel="noopener">Production Entry</a>
+        <a class="sub-option-btn secondary" href="https://marufhossain2707.github.io/ALEL-All-Entry/qc-review.html" target="_blank" rel="noopener">QC Entry</a>
       </div>
     </div>
-
     <!-- Breakdown Entry -->
     <div class="entry-card" data-title="Breakdown Entry" data-url="#">
       <div class="entry-top">
@@ -212,7 +217,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Near Miss -->
     <div class="entry-card" data-title="Near Miss" data-url="#">
       <div class="entry-top">
@@ -233,7 +237,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Safety Observation -->
     <div class="entry-card" data-title="Safety Observation" data-url="#">
       <div class="entry-top">
@@ -254,7 +257,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Kaizen / Improvement Idea -->
     <div class="entry-card" data-title="Kaizen / Improvement Idea" data-url="#">
       <div class="entry-top">
@@ -275,7 +277,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- TPM / AM Checklist -->
     <div class="entry-card" data-title="TPM / AM Checklist" data-url="#">
       <div class="entry-top">
@@ -296,7 +297,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Skill Matrix -->
     <div class="entry-card" data-title="Skill Matrix" data-url="#">
       <div class="entry-top">
@@ -317,7 +317,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Energy Audit -->
     <div class="entry-card" data-title="Energy Audit" data-url="#">
       <div class="entry-top">
@@ -338,7 +337,6 @@
         <button class="choose-btn" type="button">Open →</button>
       </div>
     </div>
-
     <!-- Meeting MOM -->
     <div class="entry-card" data-title="Meeting MOM" data-url="#">
       <div class="entry-top">
@@ -360,18 +358,14 @@
       </div>
     </div>
   </div>
-
   <div class="quick-open-row">
     <button class="quick-open-btn" id="quickOpenBtn" disabled>Quick Open — Select a Form</button>
     <p class="quick-open-note">Use the dropdowns above to open any entry form.</p>
   </div>
-
   <p class="signature">ALEL All Entry · Operational Excellence, AROPEX</p>
 </div>
-
 <script>
   let lastCard = null;
-
   function openCard(card){
     const url = card.getAttribute('data-url');
     const title = card.getAttribute('data-title');
@@ -384,14 +378,14 @@
     const finalUrl = line ? (url + (url.includes('?') ? '&' : '?') + 'line=' + encodeURIComponent(line)) : url;
     window.open(finalUrl, '_blank');
   }
-
   document.querySelectorAll('.entry-card').forEach(card => {
     const btn = card.querySelector('.choose-btn');
     const select = card.querySelector('.line-select');
     const title = card.getAttribute('data-title');
-
+    // Cards without a generic dropdown/choose-btn (e.g. OEE Entry, which has its
+    // own direct Production Entry / QC Entry links) are skipped here.
+    if(!btn || !select) return;
     btn.addEventListener('click', () => openCard(card));
-
     select.addEventListener('change', () => {
       lastCard = card;
       const quickBtn = document.getElementById('quickOpenBtn');
@@ -399,11 +393,9 @@
       quickBtn.textContent = 'Quick Open — ' + title;
     });
   });
-
   document.getElementById('quickOpenBtn').addEventListener('click', () => {
     if(lastCard) openCard(lastCard);
   });
 </script>
-
 </body>
 </html>
