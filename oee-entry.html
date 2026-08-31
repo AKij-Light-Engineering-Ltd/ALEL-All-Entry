@@ -172,7 +172,6 @@
       </div>
     </div>
   </div>
-
   <div class="card">
     <h2>Production numbers</h2>
     <div class="row">
@@ -184,7 +183,7 @@
     </div>
     <div class="row">
       <div class="field"><label>Total produced qty (Pcs)</label><input type="number" id="f_produced" value="0" min="0"></div>
-      <div class="field"><label>Reject qty (Pcs)</label><input type="number" id="f_reject" value="0" min="0"></div>
+      <div class="field"><label>Production Running Time Rejection (Pcs)</label><input type="number" id="f_reject" value="0" min="0"></div>
     </div>
   </div>
   <div class="card">
@@ -208,8 +207,9 @@
   <div class="card">
     <h2>Breakdown entry (up to 10)</h2>
     <div id="bdContainer"></div>
+    <button class="add-bd-btn" id="addBdBtn" type="button">+ Add breakdown</button>
+    <div class="bd-count" id="bdCountLabel">0 / 10 breakdown rows added</div>
   </div>
-
   <div class="card">
     <h2>Live OEE</h2>
     <div class="oee-hero">
@@ -227,7 +227,6 @@
       <div class="metric"><div class="v" id="mQual">0%</div><div class="l">Quality</div></div>
     </div>
   </div>
-
   <div class="card">
     <h2>OEE loss waterfall (Six Big Losses view)
       <span class="hint">Shift Time reduced step-by-step down to Fully Productive Time — the standard OEE loss-tree used industry-wide (SEMI E10 / OEE.com). All values are calculated automatically from data already entered above.</span>
@@ -244,7 +243,6 @@
       <div class="wf-row wf-final"><span class="wf-label">= Fully productive time</span><span class="wf-val" id="wfFPT">0 min</span></div>
     </div>
   </div>
-
   <div class="card">
     <h2>Shift capacity vs time</h2>
     <div class="cap-row"><span class="l">Planned production time</span><span id="capPPT">0 min</span></div>
@@ -361,13 +359,10 @@ const ITEMS = [
 const MACHINES = ["A-1","A-2","A-3","A-4","A-5","B-1","B-2","B-3","B-4","B-5","B-6","B-7"];
 const ELECTRICAL_BD = ["Servo motor fault","Servo drive/amplifier fault","PLC / HMI controller fault","Heater band failure","Thermocouple fault","Sensor fault (limit switch/proximity)","Solenoid/proportional valve fault (electrical side)","Power supply/MCB trip","Wiring/connector/cable fault","Encoder fault","Robot/manipulator electrical fault","Hopper dryer electrical fault","Mold temperature controller (MTC) electrical fault","Chiller electrical fault","Power failure (plant supply)"];
 const MECHANICAL_BD = ["Hydraulic oil leakage","Hydraulic pump failure/noise","Toggle mechanism fault/wear","Tie bar issue","Clamping cylinder leakage","Injection cylinder leakage","Screw/barrel wear","Non-return valve (check ring) wear","Nozzle blockage/leakage","Mold cooling line blockage/leak","Ejector pin stuck/broken","Mold misalignment","Platen parallelism issue","Cooling water line blockage/scaling","Compressed air pressure low","Conveyor/material loader mechanical fault"];
-
 document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
-
 function capacityFor(item){
   return Math.round((3600/item.ct)*item.cvt);
 }
-
 function setupCombo(inputId, listId, options, getLabel, onSelect){
   const input = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -425,47 +420,66 @@ document.getElementById('f_item').addEventListener('input', function(){
     document.getElementById('f_cavity').disabled = false;
   }
 });
-
 const bdContainer = document.getElementById('bdContainer');
 const REASON_TYPE_MAP = {};
 ELECTRICAL_BD.forEach(r => REASON_TYPE_MAP[r] = 'Electrical');
 MECHANICAL_BD.forEach(r => REASON_TYPE_MAP[r] = 'Mechanical');
-
-function buildBdRows(){
-  for(let i = 1; i <= 10; i++){
-    const row = document.createElement('div');
-    row.className = 'bd-row';
-    row.dataset.idx = i;
-    row.innerHTML = `
-      <div class="row single">
-        <div class="field"><label>Breakdown ${i} — reason</label>
-          <select class="bd-reason">
-            <option value="" selected>None</option>
-            <optgroup label="Electrical">
-              ${ELECTRICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
-            </optgroup>
-            <optgroup label="Mechanical">
-              ${MECHANICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
-            </optgroup>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Duration (Min)</label><input type="number" class="bd-duration" value="0" min="0"></div>
-        <div class="field auto"><label>Breakdown type</label><input type="text" class="bd-type" disabled placeholder="—"></div>
-      </div>
-    `;
-    bdContainer.appendChild(row);
-    row.querySelector('.bd-reason').addEventListener('change', function(){
-      const typeField = row.querySelector('.bd-type');
-      typeField.value = this.value ? REASON_TYPE_MAP[this.value] : '';
-      recalc();
-    });
-    row.querySelector('.bd-duration').addEventListener('input', recalc);
-  }
+function renumberBdRows(){
+  const rows = document.querySelectorAll('.bd-row');
+  rows.forEach((row, i) => {
+    row.querySelector('.bd-row-label').textContent = 'Breakdown ' + (i + 1) + ' — reason';
+    const removeBtn = row.querySelector('.bd-remove');
+    removeBtn.style.display = (i === 0) ? 'none' : 'inline-block';
+  });
+  const count = rows.length;
+  document.getElementById('addBdBtn').disabled = count >= 10;
+  document.getElementById('bdCountLabel').textContent = count + ' / 10 breakdown rows added';
 }
-buildBdRows();
-
+function addBdRow(){
+  const count = document.querySelectorAll('.bd-row').length;
+  if(count >= 10) return;
+  const idx = count + 1;
+  const row = document.createElement('div');
+  row.className = 'bd-row';
+  row.innerHTML = `
+    <div class="bd-row-head">
+      <span class="bd-row-label">Breakdown ${idx} — reason</span>
+      <button type="button" class="bd-remove">Remove</button>
+    </div>
+    <div class="row single">
+      <div class="field">
+        <select class="bd-reason">
+          <option value="" selected>None</option>
+          <optgroup label="Electrical">
+            ${ELECTRICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </optgroup>
+          <optgroup label="Mechanical">
+            ${MECHANICAL_BD.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Duration (Min)</label><input type="number" class="bd-duration" value="0" min="0"></div>
+      <div class="field auto"><label>Breakdown type</label><input type="text" class="bd-type" disabled placeholder="—"></div>
+    </div>
+  `;
+  bdContainer.appendChild(row);
+  row.querySelector('.bd-reason').addEventListener('change', function(){
+    const typeField = row.querySelector('.bd-type');
+    typeField.value = this.value ? REASON_TYPE_MAP[this.value] : '';
+    recalc();
+  });
+  row.querySelector('.bd-duration').addEventListener('input', recalc);
+  row.querySelector('.bd-remove').addEventListener('click', function(){
+    row.remove();
+    renumberBdRows();
+    recalc();
+  });
+  renumberBdRows();
+}
+document.getElementById('addBdBtn').addEventListener('click', addBdRow);
+addBdRow(); // start with exactly 1 fixed row; more can be added as needed
 // ---------- OEE chart / calc ----------
 let oeeChart = null;
 function initChart(){
@@ -484,9 +498,7 @@ function initChart(){
   });
 }
 initChart();
-
 function pct(v){ return Math.round(Math.max(0, Math.min(100, v*100))); }
-
 function recalc(){
   const shiftTime = parseFloat(document.getElementById('f_shifttime').value) || 0;
   const planned = parseFloat(document.getElementById('f_planned').value) || 0;
@@ -496,36 +508,26 @@ function recalc(){
   const cavity = parseFloat(document.getElementById('f_cavity').value) || 0;
   const capacityText = document.getElementById('f_capacity').value;
   const capacity = parseFloat(capacityText) || 0;
-
   const NPT_IDS = ['npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'];
   let nptMinutes = 0;
   NPT_IDS.forEach(id => { nptMinutes += parseFloat(document.getElementById(id).value) || 0; });
-
   let bdMinutes = 0;
   document.querySelectorAll('.bd-duration').forEach(el => { bdMinutes += parseFloat(el.value) || 0; });
-
   const plannedProdTime = Math.max(0, shiftTime - planned);
   const runTime = Math.max(0, plannedProdTime - nptMinutes - bdMinutes);
-
   const availability = plannedProdTime > 0 ? runTime / plannedProdTime : 0;
-
   const idealCycleSec = cavity > 0 ? ct / cavity : 0;
   const performance = (runTime > 0 && idealCycleSec > 0) ? (produced * idealCycleSec) / (runTime * 60) : 0;
-
   const quality = produced > 0 ? Math.max(0, (produced - reject) / produced) : 0;
-
   const oee = availability * performance * quality;
-
   document.getElementById('oeeNum').textContent = pct(oee) + '%';
   document.getElementById('mAvail').textContent = pct(availability) + '%';
   document.getElementById('mPerf').textContent = pct(Math.min(performance,1)) + '%';
   document.getElementById('mQual').textContent = pct(quality) + '%';
-
   if(oeeChart){
     oeeChart.data.datasets[0].data = [pct(availability), pct(Math.min(performance,1)), pct(quality)];
     oeeChart.update();
   }
-
   document.getElementById('capPPT').textContent = Math.round(plannedProdTime) + ' min';
   const target = Math.round(capacity * (plannedProdTime/60));
   document.getElementById('capTarget').textContent = target + ' pcs';
@@ -533,7 +535,6 @@ function recalc(){
   const ach = target > 0 ? Math.round((produced/target)*100) : 0;
   document.getElementById('capAch').textContent = ach + '%';
   document.getElementById('capBar').style.width = Math.min(100, ach) + '%';
-
   const capAchEl = document.getElementById('capAch');
   const capBarEl = document.getElementById('capBar');
   const capStatusEl = document.getElementById('capStatus');
@@ -554,7 +555,6 @@ function recalc(){
     capStatusEl.className = 'cap-status';
     capStatusEl.textContent = '';
   }
-
   // ---- Speed loss (auto, read-only — does not affect OEE numbers above) ----
   const ctActual = parseFloat(document.getElementById('f_ct_actual').value) || 0;
   const speedPctEl = document.getElementById('f_speedloss_pct');
@@ -572,7 +572,6 @@ function recalc(){
     speedPctEl.value = '0%';
     speedQtyEl.value = '0 pcs';
   }
-
   // ---- Cavity loss (auto, read-only) ----
   // If Running Cavity (actually running this shift) is left blank, assume it
   // equals Actual Cavity (no blockage) — no edit required in that case.
@@ -596,7 +595,6 @@ function recalc(){
   } else {
     cavityUtilEl.value = '0%';
   }
-
   // ---- Combined loss when BOTH cycle time and cavity deviate from standard at
   // once ----
   // Simply adding "Product loss due to speed" (which assumes cavity = standard)
@@ -614,7 +612,6 @@ function recalc(){
   } else {
     combinedLossQtyEl.value = '0 pcs';
   }
-
   // ---- Speed loss, official Six Big Losses formula (auto, read-only) ----
   // Speed Loss (units) = (Run Time / Standard Ideal Cycle Time) - Produced Qty
   // Uses only data already in the form (produced, runTime, idealCycleSec from
@@ -627,7 +624,6 @@ function recalc(){
   } else {
     speedOfficialQtyEl.value = '0 pcs';
   }
-
   // ---- OEE loss waterfall (Shift Time -> Fully Productive Time) ----
   // Standard OEE loss-tree (SEMI E10 / OEE.com): each stage subtracts one
   // category of loss. The final Fully Productive Time / Shift Time ratio
@@ -638,7 +634,6 @@ function recalc(){
   const performanceLossMin = Math.max(0, runTime - netRunTimeMin);
   const fullyProductiveTimeMin = idealCycleSec > 0 ? Math.max(0, ((produced - reject) * idealCycleSec) / 60) : 0;
   const qualityLossMin = Math.max(0, netRunTimeMin - fullyProductiveTimeMin);
-
   document.getElementById('wfShift').textContent = Math.round(shiftTime) + ' min';
   document.getElementById('wfPlanned').textContent = Math.round(planned) + ' min';
   document.getElementById('wfPPT').textContent = Math.round(plannedProdTime) + ' min';
@@ -648,7 +643,6 @@ function recalc(){
   document.getElementById('wfNetRun').textContent = Math.round(netRunTimeMin) + ' min';
   document.getElementById('wfQualLoss').textContent = Math.round(qualityLossMin) + ' min';
   document.getElementById('wfFPT').textContent = Math.round(fullyProductiveTimeMin) + ' min';
-
   // ---- World-Class OEE benchmark badge (industry-standard reference range) ----
   const oeeBadgeEl = document.getElementById('oeeBadge');
   const oeePctVal = oee * 100;
@@ -669,11 +663,9 @@ function recalc(){
     oeeBadgeEl.textContent = 'Needs improvement';
   }
 }
-
 ['f_shifttime','f_planned','f_produced','f_reject','f_ct','f_ct_actual','f_cavity','f_running_cavity','npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalc);
 });
-
 function togglePlannedReason(){
   const plannedVal = parseFloat(document.getElementById('f_planned').value) || 0;
   const reasonField = document.getElementById('f_planned_reason');
@@ -686,13 +678,10 @@ function togglePlannedReason(){
 }
 document.getElementById('f_planned').addEventListener('input', togglePlannedReason);
 togglePlannedReason();
-
 recalc();
-
 document.getElementById('submitBtn').addEventListener('click', function(){
   const statusEl = document.getElementById('statusMsg');
   const submitBtn = this;
-
   const payload = {
     sheet: "OEE Entry",
     date: document.getElementById('f_date').value,
@@ -725,53 +714,44 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     cavityUtilizationPercent: document.getElementById('f_cavity_util').value,
     combinedSpeedCavityLossQtyPcs: document.getElementById('f_combinedloss_qty').value
   };
-
   document.querySelectorAll('.bd-row').forEach((row, i) => {
     const n = i + 1;
     payload["breakdown" + n + "_type"] = row.querySelector('.bd-type').value;
     payload["breakdown" + n + "_reason"] = row.querySelector('.bd-reason').value;
     payload["breakdown" + n + "_min"] = row.querySelector('.bd-duration').value;
   });
-
   payload.oeePercent = document.getElementById('oeeNum').textContent;
   payload.availability = document.getElementById('mAvail').textContent;
   payload.performance = document.getElementById('mPerf').textContent;
   payload.quality = document.getElementById('mQual').textContent;
-
   if(!payload.shift || !payload.machine || !payload.item){
     statusEl.textContent = 'Please fill Shift, Machine name and Item name before submitting.';
     statusEl.style.color = '#b3401e';
     return;
   }
-
   if((parseFloat(payload.plannedDowntimeMin) || 0) > 0 && !payload.plannedDowntimeReason.trim()){
     statusEl.textContent = 'Please enter a Planned downtime reason since downtime minutes were entered.';
     statusEl.style.color = '#b3401e';
     return;
   }
-
   if((parseFloat(payload.rejectQty) || 0) > (parseFloat(payload.producedQty) || 0)){
     statusEl.textContent = 'Reject qty cannot be more than Total produced qty. Please check the numbers.';
     statusEl.style.color = '#b3401e';
     return;
   }
-
   if((parseFloat(payload.runningCavity) || 0) > (parseFloat(payload.cavity) || 0)){
     statusEl.textContent = 'Running Cavity cannot be more than Actual Cavity. Please check the numbers.';
     statusEl.style.color = '#b3401e';
     return;
   }
-
   if(SHEET_ENDPOINT === "YOUR_WEB_APP_URL_HERE"){
     statusEl.textContent = 'Google Sheet not connected yet — entry not saved.';
     statusEl.style.color = '#b3401e';
     return;
   }
-
   submitBtn.disabled = true;
   statusEl.textContent = 'Submitting...';
   statusEl.style.color = '#6b6558';
-
   fetch(SHEET_ENDPOINT, {
     method: 'POST',
     mode: 'no-cors',
@@ -790,7 +770,6 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     submitBtn.disabled = false;
   });
 });
-
 function resetForm(){
   document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
   document.getElementById('f_shift').value = '';
@@ -816,11 +795,8 @@ function resetForm(){
   ['npt_unavailable_order','npt_utility_gas','npt_manpower_shortage','npt_qco','npt_rm_shortage','npt_warehouse_block','npt_others'].forEach(id => {
     document.getElementById(id).value = 0;
   });
-  document.querySelectorAll('.bd-row').forEach(row => {
-    row.querySelector('.bd-reason').value = '';
-    row.querySelector('.bd-type').value = '';
-    row.querySelector('.bd-duration').value = 0;
-  });
+  bdContainer.innerHTML = '';
+  addBdRow();
   recalc();
 }
 </script>
