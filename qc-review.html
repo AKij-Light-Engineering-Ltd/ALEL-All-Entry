@@ -253,16 +253,50 @@ function openDetail(entry){
   document.getElementById('qcDoneNote').style.display = 'none';
   document.getElementById('qcStatusMsg').textContent = '';
 
+  const isLocked = entry.qcStatus === 'Completed by QC';
+
   document.getElementById('metaCard').innerHTML = `
     <div><b>Date:</b> ${escapeHtml(entry.date)} &nbsp; <b>Shift:</b> ${escapeHtml(entry.shift)}</div>
     <div><b>Machine:</b> ${escapeHtml(entry.machine)}</div>
     <div><b>Item:</b> ${escapeHtml(entry.item)}</div>
     <div><b>Produced qty:</b> ${escapeHtml(entry.producedQty)} pcs</div>
     <div><b>Reported reject qty (by operator):</b> ${escapeHtml(entry.rejectQty)} pcs</div>
-  `;
+  ` + (isLocked ? `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);">
+      <b>Already reviewed by QC</b> — ${escapeHtml(entry.qcSubmittedBy || '')} on ${escapeHtml(entry.qcSubmittedAt || '')}<br>
+      Verified Quality: ${escapeHtml(entry.qcVerifiedQuality || '')} &nbsp;·&nbsp; Verified OEE: ${escapeHtml(entry.qcVerifiedOeePercent || '')}
+    </div>
+  ` : '');
 
+  // Once QC has submitted a review, this entry is locked: reopening it
+  // shows exactly what was submitted, read-only — it can no longer be
+  // edited or resubmitted (that used to silently overwrite the original
+  // review every time someone reopened the entry).
   document.getElementById('rcaRowsContainer').innerHTML = '';
-  addReasonRow();
+  if(isLocked){
+    let anyRow = false;
+    for(let n = 1; n <= 8; n++){
+      const checkedVal = entry['qcRow' + n + '_checked'];
+      if(checkedVal === undefined || checkedVal === ''){ continue; }
+      anyRow = true;
+      addReasonRow({
+        checked: checkedVal,
+        rejected: entry['qcRow' + n + '_rejected'],
+        reason: entry['qcRow' + n + '_reason']
+      }, true);
+    }
+    if(!anyRow) addReasonRow(null, true);
+    document.getElementById('addRowBtn').style.display = 'none';
+    document.getElementById('qc_name').value = entry.qcSubmittedBy || '';
+    document.getElementById('qc_name').disabled = true;
+    document.getElementById('qcSubmitBtn').style.display = 'none';
+  } else {
+    addReasonRow();
+    document.getElementById('addRowBtn').style.display = '';
+    document.getElementById('qc_name').value = '';
+    document.getElementById('qc_name').disabled = false;
+    document.getElementById('qcSubmitBtn').style.display = '';
+  }
   updateReconSummary();
 }
 
@@ -272,7 +306,7 @@ document.getElementById('backBtn').addEventListener('click', function(){
   loadEntries();
 });
 
-function addReasonRow(){
+function addReasonRow(prefill, locked){
   const container = document.getElementById('rcaRowsContainer');
   const rows = container.querySelectorAll('.rca-row');
   if(rows.length >= 8) return;
@@ -295,8 +329,20 @@ function addReasonRow(){
       <div class="field"><label>Item Rejected</label><input type="number" class="rca-rejected" min="0" value="0"></div>
     </div>
   `;
-  row.querySelector('.rca-remove').addEventListener('click', () => { row.remove(); updateReconSummary(); });
-  row.querySelectorAll('input').forEach(el => el.addEventListener('input', updateReconSummary));
+  if(prefill){
+    row.querySelector('.rca-checked').value = prefill.checked || 0;
+    row.querySelector('.rca-rejected').value = prefill.rejected || 0;
+    row.querySelector('.rca-reason').value = prefill.reason || '';
+  }
+  if(locked){
+    row.querySelector('.rca-checked').disabled = true;
+    row.querySelector('.rca-rejected').disabled = true;
+    row.querySelector('.rca-reason').disabled = true;
+    row.querySelector('.rca-remove').style.display = 'none';
+  } else {
+    row.querySelector('.rca-remove').addEventListener('click', () => { row.remove(); updateReconSummary(); });
+    row.querySelectorAll('input').forEach(el => el.addEventListener('input', updateReconSummary));
+  }
   container.appendChild(row);
 }
 
