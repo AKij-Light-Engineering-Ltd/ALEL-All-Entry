@@ -26,6 +26,7 @@
     font-size:14px;font-family:inherit;background:#fdfcf9;color:var(--ink);
   }
   .field input:disabled{background:#f1efe6;color:var(--muted);}
+  .field input:read-only{background:#f1efe6;color:var(--ink);font-weight:700;}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
   .row.single{grid-template-columns:1fr;}
 
@@ -108,16 +109,17 @@
     <div class="card">
       <h2>Inspection totals</h2>
       <div class="row">
-        <div class="field"><label>Total Checked (Pcs)</label><input type="number" id="qc_total_checked" min="0" value="0"></div>
-        <div class="field"><label>Total Rejected (Pcs)</label><input type="number" id="qc_total_rejected" min="0" value="0"></div>
+        <div class="field"><label>Total Checked (Pcs)</label><input type="number" id="qc_total_checked" min="0" value="0" readonly></div>
+        <div class="field"><label>Total Rejected (Pcs)</label><input type="number" id="qc_total_rejected" min="0" value="0" readonly></div>
       </div>
+      <p style="font-size:12px;color:var(--muted);margin:4px 0 0;">Auto-calculated from the reason rows below as you fill them in.</p>
     </div>
 
     <div class="card">
       <h2>Reject breakdown by reason</h2>
       <div id="rcaRowsContainer"></div>
       <button class="add-row-btn" id="addRowBtn" type="button">+ Add reason row</button>
-      <div class="recon-summary" id="reconSummary">Checked: 0 / 0 &nbsp;·&nbsp; Rejected: 0 / 0</div>
+      <div class="recon-summary ok" id="reconSummary">Checked: 0 pcs &nbsp;·&nbsp; Rejected: 0 pcs</div>
     </div>
 
     <div class="card">
@@ -259,9 +261,6 @@ function openDetail(entry){
     <div><b>Reported reject qty (by operator):</b> ${escapeHtml(entry.rejectQty)} pcs</div>
   `;
 
-  document.getElementById('qc_total_checked').value = entry.producedQty || 0;
-  document.getElementById('qc_total_rejected').value = entry.rejectQty || 0;
-
   document.getElementById('rcaRowsContainer').innerHTML = '';
   addReasonRow();
   updateReconSummary();
@@ -302,25 +301,24 @@ function addReasonRow(){
 }
 
 document.getElementById('addRowBtn').addEventListener('click', addReasonRow);
-document.getElementById('qc_total_checked').addEventListener('input', updateReconSummary);
-document.getElementById('qc_total_rejected').addEventListener('input', updateReconSummary);
 
+// Total Checked / Total Rejected are no longer typed in by QC — they are
+// always the sum of the reason rows below, so the two can never disagree
+// with each other. They're also intentionally independent from the
+// operator's "Reported reject qty" (shown above, for reference only):
+// QC's own inspection count is the authoritative figure.
 function updateReconSummary(){
-  const totalChecked = parseFloat(document.getElementById('qc_total_checked').value) || 0;
-  const totalRejected = parseFloat(document.getElementById('qc_total_rejected').value) || 0;
   let sumChecked = 0, sumRejected = 0;
   document.querySelectorAll('.rca-row').forEach(row => {
     sumChecked += parseFloat(row.querySelector('.rca-checked').value) || 0;
     sumRejected += parseFloat(row.querySelector('.rca-rejected').value) || 0;
   });
+  document.getElementById('qc_total_checked').value = sumChecked;
+  document.getElementById('qc_total_rejected').value = sumRejected;
   const el = document.getElementById('reconSummary');
-  el.innerHTML = `Checked: <b>${sumChecked}</b> / ${totalChecked} &nbsp;·&nbsp; Rejected: <b>${sumRejected}</b> / ${totalRejected}`;
-  if(sumChecked === totalChecked && sumRejected === totalRejected && totalChecked > 0){
-    el.className = 'recon-summary ok';
-  } else {
-    el.className = 'recon-summary bad';
-  }
-  return { totalChecked, totalRejected, sumChecked, sumRejected };
+  el.innerHTML = `Checked: <b>${sumChecked}</b> pcs &nbsp;·&nbsp; Rejected: <b>${sumRejected}</b> pcs`;
+  el.className = 'recon-summary ok';
+  return { totalChecked: sumChecked, totalRejected: sumRejected, sumChecked, sumRejected };
 }
 
 document.getElementById('qcSubmitBtn').addEventListener('click', function(){
