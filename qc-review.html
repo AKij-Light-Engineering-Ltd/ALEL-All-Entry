@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QC Review — IMM</title>
+<style>
+  :root{
+    --ink:#1c2521; --paper:#f6f4ee; --card:#ffffff; --line:#e4e0d2;
+    --accent:#2f6f4e; --accent-dark:#204f38; --muted:#6b6558;
+    --bad:#b3401e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);padding:0 0 60px;}
+  .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
+  .header{background:var(--accent-dark);color:#fff;padding:22px 14px 26px;}
+  .header-inner{max-width:640px;margin:0 auto;}
+  .header .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:11px;opacity:.75;margin-bottom:6px;}
+  .header h1{margin:0 0 6px;font-size:22px;line-height:1.25;}
+  .header p{margin:0;font-size:13px;line-height:1.5;opacity:.9;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px;}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-dark);margin:0 0 12px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font-size:14px;font-family:inherit;background:#fdfcf9;color:var(--ink);
+  }
+  .field input:disabled{background:#f1efe6;color:var(--muted);}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .row.single{grid-template-columns:1fr;}
+
+  /* list view */
+  .search-bar{margin-bottom:12px;}
+  .search-bar input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;}
+  .entry-item{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  }
+  .entry-item:hover{border-color:var(--accent);}
+  .entry-main .date{font-size:12px;color:var(--muted);}
+  .entry-main .title{font-size:14.5px;font-weight:700;margin:2px 0;}
+  .entry-main .sub{font-size:12.5px;color:var(--muted);}
+  .entry-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  .entry-badge.pending{background:#fdf2df;color:#a5710e;}
+  .entry-badge.done{background:#e4f3ea;color:#1d7a4c;}
+  .empty-note{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
+  .loading-note{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
+  .back-btn{
+    background:none;border:none;color:var(--accent-dark);font-size:13px;font-weight:700;
+    cursor:pointer;padding:0;margin-bottom:14px;display:inline-flex;align-items:center;gap:4px;
+  }
+
+  /* detail view */
+  .meta-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .meta-card div{font-size:13.5px;margin-bottom:4px;}
+  .meta-card b{color:var(--accent-dark);}
+
+  .rca-row{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:#fdfcf9;}
+  .rca-row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .rca-row-head span{font-size:12px;font-weight:700;color:var(--accent-dark);}
+  .rca-remove{background:none;border:none;color:var(--bad);font-size:12px;font-weight:700;cursor:pointer;padding:2px 0;}
+  .add-row-btn{
+    width:100%;padding:10px;border:1px dashed var(--accent);border-radius:6px;
+    background:none;color:var(--accent-dark);font-weight:700;font-size:13px;cursor:pointer;margin-top:4px;
+  }
+  .add-row-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .recon-summary{
+    display:flex;justify-content:space-between;align-items:center;font-size:13px;
+    margin:10px 0;padding:9px 12px;border-radius:6px;background:#f1efe6;
+  }
+  .recon-summary.ok{background:#eef6f0;color:var(--accent-dark);}
+  .recon-summary.bad{background:#fbe9e3;color:var(--bad);}
+  .recon-summary b{font-size:14px;}
+
+  .submit-btn{
+    width:100%;background:var(--accent);color:#fff;border:none;padding:14px;
+    font-size:15px;font-weight:700;border-radius:6px;cursor:pointer;margin-top:14px;
+  }
+  .submit-btn:hover{background:var(--accent-dark);}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .status-msg{text-align:center;font-size:13px;margin-top:10px;color:var(--muted);}
+  .qc-done-note{
+    background:#e4f3ea;color:#1d7a4c;border-radius:8px;padding:14px;text-align:center;
+    font-size:14px;font-weight:600;margin-top:14px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">Quality — IMM</div>
+    <h1>QC Review</h1>
+    <p>Check each shift's entries, record Total Checked / Rejected, and split the rejects by reason.</p>
+  </div>
+</div>
+<div class="wrap">
+  <div id="listView">
+    <div class="search-bar"><input type="text" id="searchBox" placeholder="Search by machine, item, or date..."></div>
+    <div id="entryList"><div class="loading-note">Loading entries...</div></div>
+  </div>
+
+  <div id="detailView" style="display:none;">
+    <button class="back-btn" id="backBtn">&larr; Back to list</button>
+    <div class="meta-card" id="metaCard"></div>
+
+    <div class="card">
+      <h2>Inspection totals</h2>
+      <div class="row">
+        <div class="field"><label>Total Checked (Pcs)</label><input type="number" id="qc_total_checked" min="0" value="0"></div>
+        <div class="field"><label>Total Rejected (Pcs)</label><input type="number" id="qc_total_rejected" min="0" value="0"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reject breakdown by reason</h2>
+      <div id="rcaRowsContainer"></div>
+      <button class="add-row-btn" id="addRowBtn" type="button">+ Add reason row</button>
+      <div class="recon-summary" id="reconSummary">Checked: 0 / 0 &nbsp;·&nbsp; Rejected: 0 / 0</div>
+    </div>
+
+    <div class="card">
+      <div class="field"><label>Your name</label><input type="text" id="qc_name" placeholder="Who is submitting this?"></div>
+    </div>
+
+    <button class="submit-btn" id="qcSubmitBtn" type="button">Submit QC Review</button>
+    <p class="status-msg" id="qcStatusMsg"></p>
+    <div class="qc-done-note" id="qcDoneNote" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz_92oalEw3YEloH-9wEQ7irO4lslh9kr25_gylP9JmXr5CMpYAA0bJtozHZUpMf_uF/exec";
+const REJECT_REASONS = [
+  "Short molding / short shot","Flash / burr","Sink mark","Warpage / deformation",
+  "Silver streak / splay mark","Weld line / flow mark","Black spot / contamination",
+  "Color mismatch / off-shade","Discoloration / burn mark","Dimension out of tolerance",
+  "Crack / breakage","Air trap / bubble / void","Gate mark / cut mark issue",
+  "Scratch / surface damage","Sticking in mold / ejector mark","Missing part / incomplete assembly",
+  "Flow mark / jetting","Delamination","Startup / trial rejection","Other"
+];
+
+let ALL_ENTRIES = [];
+let currentEntry = null;
+
+function escapeHtml(str){
+  return String(str === undefined || str === null ? "" : str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function loadEntries(){
+  fetch(SHEET_ENDPOINT + "?action=listEntries")
+    .then(r => r.json())
+    .then(data => {
+      ALL_ENTRIES = (data && data.entries) ? data.entries : [];
+      renderList(ALL_ENTRIES);
+    })
+    .catch(() => {
+      document.getElementById('entryList').innerHTML =
+        '<div class="empty-note">Could not load entries. Check your connection and reload the page.</div>';
+    });
+}
+
+function renderList(entries){
+  const container = document.getElementById('entryList');
+  if(!entries || entries.length === 0){
+    container.innerHTML = '<div class="empty-note">No OEE entries found yet.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  entries.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'entry-item';
+    const badgeClass = e.qcStatus === 'Completed by QC' ? 'done' : 'pending';
+    const badgeText = e.qcStatus === 'Completed by QC' ? 'Reviewed' : 'Pending';
+    div.innerHTML = `
+      <div class="entry-main">
+        <div class="date">${escapeHtml(e.date)} · ${escapeHtml(e.shift)}</div>
+        <div class="title">${escapeHtml(e.machine)} — ${escapeHtml(e.item)}</div>
+        <div class="sub">Produced ${escapeHtml(e.producedQty)} pcs · Reported reject ${escapeHtml(e.rejectQty)} pcs</div>
+      </div>
+      <span class="entry-badge ${badgeClass}">${badgeText}</span>
+    `;
+    div.addEventListener('click', () => openDetail(e));
+    container.appendChild(div);
+  });
+}
+
+document.getElementById('searchBox').addEventListener('input', function(){
+  const f = this.value.toLowerCase();
+  const filtered = ALL_ENTRIES.filter(e =>
+    (e.machine||'').toLowerCase().includes(f) ||
+    (e.item||'').toLowerCase().includes(f) ||
+    (e.date||'').toLowerCase().includes(f)
+  );
+  renderList(filtered);
+});
+
+function openDetail(entry){
+  currentEntry = entry;
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('qcDoneNote').style.display = 'none';
+  document.getElementById('qcStatusMsg').textContent = '';
+
+  document.getElementById('metaCard').innerHTML = `
+    <div><b>Date:</b> ${escapeHtml(entry.date)} &nbsp; <b>Shift:</b> ${escapeHtml(entry.shift)}</div>
+    <div><b>Machine:</b> ${escapeHtml(entry.machine)}</div>
+    <div><b>Item:</b> ${escapeHtml(entry.item)}</div>
+    <div><b>Produced qty:</b> ${escapeHtml(entry.producedQty)} pcs</div>
+    <div><b>Reported reject qty (by operator):</b> ${escapeHtml(entry.rejectQty)} pcs</div>
+  `;
+
+  document.getElementById('qc_total_checked').value = entry.producedQty || 0;
+  document.getElementById('qc_total_rejected').value = entry.rejectQty || 0;
+
+  document.getElementById('rcaRowsContainer').innerHTML = '';
+  addReasonRow();
+  updateReconSummary();
+}
+
+document.getElementById('backBtn').addEventListener('click', function(){
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('listView').style.display = 'block';
+  loadEntries();
+});
+
+function addReasonRow(){
+  const container = document.getElementById('rcaRowsContainer');
+  const rows = container.querySelectorAll('.rca-row');
+  if(rows.length >= 8) return;
+  const idx = rows.length + 1;
+  const row = document.createElement('div');
+  row.className = 'rca-row';
+  const optionsHtml = REJECT_REASONS.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+  row.innerHTML = `
+    <div class="rca-row-head">
+      <span>Reason ${idx}</span>
+      <button type="button" class="rca-remove">Remove</button>
+    </div>
+    <div class="row">
+      <div class="field"><label>Item Checked</label><input type="number" class="rca-checked" min="0" value="0"></div>
+      <div class="field"><label>Item Rejected</label><input type="number" class="rca-rejected" min="0" value="0"></div>
+    </div>
+    <div class="row single">
+      <div class="field"><label>RCA Reason</label>
+        <select class="rca-reason"><option value="">Choose reason</option>${optionsHtml}</select>
+      </div>
+    </div>
+  `;
+  row.querySelector('.rca-remove').addEventListener('click', () => { row.remove(); updateReconSummary(); });
+  row.querySelectorAll('input').forEach(el => el.addEventListener('input', updateReconSummary));
+  container.appendChild(row);
+}
+
+document.getElementById('addRowBtn').addEventListener('click', addReasonRow);
+document.getElementById('qc_total_checked').addEventListener('input', updateReconSummary);
+document.getElementById('qc_total_rejected').addEventListener('input', updateReconSummary);
+
+function updateReconSummary(){
+  const totalChecked = parseFloat(document.getElementById('qc_total_checked').value) || 0;
+  const totalRejected = parseFloat(document.getElementById('qc_total_rejected').value) || 0;
+  let sumChecked = 0, sumRejected = 0;
+  document.querySelectorAll('.rca-row').forEach(row => {
+    sumChecked += parseFloat(row.querySelector('.rca-checked').value) || 0;
+    sumRejected += parseFloat(row.querySelector('.rca-rejected').value) || 0;
+  });
+  const el = document.getElementById('reconSummary');
+  el.innerHTML = `Checked: <b>${sumChecked}</b> / ${totalChecked} &nbsp;·&nbsp; Rejected: <b>${sumRejected}</b> / ${totalRejected}`;
+  if(sumChecked === totalChecked && sumRejected === totalRejected && totalChecked > 0){
+    el.className = 'recon-summary ok';
+  } else {
+    el.className = 'recon-summary bad';
+  }
+  return { totalChecked, totalRejected, sumChecked, sumRejected };
+}
+
+document.getElementById('qcSubmitBtn').addEventListener('click', function(){
+  const statusEl = document.getElementById('qcStatusMsg');
+  const btn = this;
+  const recon = updateReconSummary();
+  const qcName = document.getElementById('qc_name').value.trim();
+
+  if(!qcName){
+    statusEl.textContent = 'Please enter your name.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+  if(recon.totalChecked <= 0){
+    statusEl.textContent = 'Total Checked must be greater than 0.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+  if(recon.sumChecked !== recon.totalChecked || recon.sumRejected !== recon.totalRejected){
+    statusEl.textContent = 'Row totals must exactly match Total Checked and Total Rejected above.';
+    statusEl.style.color = '#b3401e';
+    return;
+  }
+
+  const payload = {
+    action: 'qcSubmit',
+    entryId: currentEntry.entryId,
+    qcName: qcName,
+    totalChecked: recon.totalChecked,
+    totalRejected: recon.totalRejected
+  };
+  document.querySelectorAll('.rca-row').forEach((row, i) => {
+    const n = i + 1;
+    payload['qcRow' + n + '_checked'] = row.querySelector('.rca-checked').value;
+    payload['qcRow' + n + '_rejected'] = row.querySelector('.rca-rejected').value;
+    payload['qcRow' + n + '_reason'] = row.querySelector('.rca-reason').value;
+  });
+
+  btn.disabled = true;
+  statusEl.textContent = 'Submitting...';
+  statusEl.style.color = '#6b6558';
+
+  fetch(SHEET_ENDPOINT, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).then(() => {
+    statusEl.textContent = '';
+    document.getElementById('qcDoneNote').style.display = 'block';
+    document.getElementById('qcDoneNote').textContent = 'QC review saved for this entry.';
+    btn.disabled = false;
+  }).catch(() => {
+    statusEl.textContent = 'Submitted (response not confirmed — please check the sheet).';
+    statusEl.style.color = '#6b6558';
+    btn.disabled = false;
+  });
+});
+
+loadEntries();
+</script>
+</body>
+</html>
