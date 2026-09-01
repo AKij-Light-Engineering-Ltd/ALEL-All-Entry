@@ -149,16 +149,63 @@ function escapeHtml(str){
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
+// Cross-origin fetch() GET requests to an Apps Script /exec URL get
+// blocked by the browser's CORS policy on Google's internal redirect,
+// even though the exact same URL works fine typed directly into the
+// address bar. JSONP avoids this entirely: we load the response through
+// a <script> tag (which is never subject to CORS) and the backend wraps
+// the JSON in a call to a globally-defined callback function.
+let jsonpCounter = 0;
+function loadEntriesJsonp(){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'alelQcCallback_' + (++jsonpCounter) + '_' + Date.now();
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      delete window[callbackName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+
+    const timer = setTimeout(() => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Request timed out after 15s (no response from server).'));
+    }, 15000);
+
+    window[callbackName] = (data) => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Script load failed (network error reaching Apps Script URL).'));
+    };
+
+    script.src = SHEET_ENDPOINT + '?action=listEntries&callback=' + encodeURIComponent(callbackName);
+    document.body.appendChild(script);
+  });
+}
+
 function loadEntries(){
-  fetch(SHEET_ENDPOINT + "?action=listEntries")
-    .then(r => r.json())
+  loadEntriesJsonp()
     .then(data => {
       ALL_ENTRIES = (data && data.entries) ? data.entries : [];
       renderList(ALL_ENTRIES);
     })
-    .catch(() => {
+    .catch(err => {
+      console.error('QC review: could not load entries ->', err);
       document.getElementById('entryList').innerHTML =
-        '<div class="empty-note">Could not load entries. Check your connection and reload the page.</div>';
+        '<div class="empty-note">Could not load entries. Check your connection and reload the page.<br><small style="color:#a5451e;">Debug: ' +
+        escapeHtml(err && err.message ? err.message : String(err)) +
+        ' — check browser console (F12) for details.</small></div>';
     });
 }
 
