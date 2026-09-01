@@ -285,14 +285,14 @@ function addReasonRow(){
       <span>Reason ${idx}</span>
       <button type="button" class="rca-remove">Remove</button>
     </div>
-    <div class="row">
-      <div class="field"><label>Item Checked</label><input type="number" class="rca-checked" min="0" value="0"></div>
-      <div class="field"><label>Item Rejected</label><input type="number" class="rca-rejected" min="0" value="0"></div>
-    </div>
     <div class="row single">
       <div class="field"><label>RCA Reason</label>
         <select class="rca-reason"><option value="">Choose reason</option>${optionsHtml}</select>
       </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Item Checked</label><input type="number" class="rca-checked" min="0" value="0"></div>
+      <div class="field"><label>Item Rejected</label><input type="number" class="rca-rejected" min="0" value="0"></div>
     </div>
   `;
   row.querySelector('.rca-remove').addEventListener('click', () => { row.remove(); updateReconSummary(); });
