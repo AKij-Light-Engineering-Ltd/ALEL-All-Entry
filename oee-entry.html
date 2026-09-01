@@ -498,7 +498,7 @@ function initChart(){
   });
 }
 initChart();
-function pct(v){ return Math.round(Math.max(0, Math.min(100, v*100))); }
+function pct(v){ return Math.round(Math.max(0, Math.min(100, v*100)) * 10) / 10; }
 function recalc(){
   const shiftTime = parseFloat(document.getElementById('f_shifttime').value) || 0;
   const planned = parseFloat(document.getElementById('f_planned').value) || 0;
