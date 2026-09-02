@@ -491,7 +491,8 @@ function loadFloorHistory(floor){
         avgEl.textContent = 'No audits this month yet';
       }
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error('5S history: could not load ->', err);
       prevEl.textContent = '—';
       avgEl.textContent = '—';
       noteEl.textContent = 'Could not load audit history right now.';
