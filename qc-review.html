@@ -109,10 +109,10 @@
     <div class="card">
       <h2>Inspection totals</h2>
       <div class="row">
-        <div class="field"><label>Total Checked (Pcs)</label><input type="number" id="qc_total_checked" min="0" value="0" readonly></div>
+        <div class="field"><label>Total Checked (Pcs)</label><input type="number" id="qc_total_checked" min="0" value="0"></div>
         <div class="field"><label>Total Rejected (Pcs)</label><input type="number" id="qc_total_rejected" min="0" value="0" readonly></div>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin:4px 0 0;">Auto-calculated from the reason rows below as you fill them in.</p>
+      <p style="font-size:12px;color:var(--muted);margin:4px 0 0;">Total Checked is entered manually (the sample size QC actually checked). Total Rejected is auto-calculated from the reason rows below.</p>
     </div>
 
     <div class="card">
@@ -268,6 +268,19 @@ function openDetail(entry){
     </div>
   ` : '');
 
+  // Total Checked (Pcs) is now typed in directly by QC — it's the actual
+  // sample size checked, and does not need to derive from or match the
+  // reason rows below (a single checked batch can span multiple reject
+  // reasons, so summing rows for "checked" was double counting / wrong).
+  // Total Rejected (Pcs) still auto-sums from the reason rows.
+  if(isLocked){
+    document.getElementById('qc_total_checked').value = entry.qcTotalChecked || 0;
+    document.getElementById('qc_total_checked').disabled = true;
+  } else {
+    document.getElementById('qc_total_checked').value = 0;
+    document.getElementById('qc_total_checked').disabled = false;
+  }
+
   // Once QC has submitted a review, this entry is locked: reopening it
   // shows exactly what was submitted, read-only — it can no longer be
   // edited or resubmitted (that used to silently overwrite the original
@@ -276,13 +289,13 @@ function openDetail(entry){
   if(isLocked){
     let anyRow = false;
     for(let n = 1; n <= 8; n++){
-      const checkedVal = entry['qcRow' + n + '_checked'];
-      if(checkedVal === undefined || checkedVal === ''){ continue; }
+      const rejectedVal = entry['qcRow' + n + '_rejected'];
+      const reasonVal = entry['qcRow' + n + '_reason'];
+      if((rejectedVal === undefined || rejectedVal === '') && !reasonVal){ continue; }
       anyRow = true;
       addReasonRow({
-        checked: checkedVal,
-        rejected: entry['qcRow' + n + '_rejected'],
-        reason: entry['qcRow' + n + '_reason']
+        rejected: rejectedVal,
+        reason: reasonVal
       }, true);
     }
     if(!anyRow) addReasonRow(null, true);
@@ -324,47 +337,43 @@ function addReasonRow(prefill, locked){
         <select class="rca-reason"><option value="">Choose reason</option>${optionsHtml}</select>
       </div>
     </div>
-    <div class="row">
-      <div class="field"><label>Item Checked</label><input type="number" class="rca-checked" min="0" value="0"></div>
+    <div class="row single">
       <div class="field"><label>Item Rejected</label><input type="number" class="rca-rejected" min="0" value="0"></div>
     </div>
   `;
   if(prefill){
-    row.querySelector('.rca-checked').value = prefill.checked || 0;
     row.querySelector('.rca-rejected').value = prefill.rejected || 0;
     row.querySelector('.rca-reason').value = prefill.reason || '';
   }
   if(locked){
-    row.querySelector('.rca-checked').disabled = true;
     row.querySelector('.rca-rejected').disabled = true;
     row.querySelector('.rca-reason').disabled = true;
     row.querySelector('.rca-remove').style.display = 'none';
   } else {
     row.querySelector('.rca-remove').addEventListener('click', () => { row.remove(); updateReconSummary(); });
-    row.querySelectorAll('input').forEach(el => el.addEventListener('input', updateReconSummary));
+    row.querySelector('.rca-rejected').addEventListener('input', updateReconSummary);
   }
   container.appendChild(row);
 }
 
 document.getElementById('addRowBtn').addEventListener('click', addReasonRow);
+document.getElementById('qc_total_checked').addEventListener('input', updateReconSummary);
 
-// Total Checked / Total Rejected are no longer typed in by QC — they are
-// always the sum of the reason rows below, so the two can never disagree
-// with each other. They're also intentionally independent from the
-// operator's "Reported reject qty" (shown above, for reference only):
-// QC's own inspection count is the authoritative figure.
+// Total Rejected (Pcs) is still always the sum of the "Item Rejected"
+// values across the reason rows below. Total Checked (Pcs) is now a
+// plain manual entry (the actual sample size QC inspected) and is read
+// directly from its own input rather than being derived from the rows.
 function updateReconSummary(){
-  let sumChecked = 0, sumRejected = 0;
+  let sumRejected = 0;
   document.querySelectorAll('.rca-row').forEach(row => {
-    sumChecked += parseFloat(row.querySelector('.rca-checked').value) || 0;
     sumRejected += parseFloat(row.querySelector('.rca-rejected').value) || 0;
   });
-  document.getElementById('qc_total_checked').value = sumChecked;
   document.getElementById('qc_total_rejected').value = sumRejected;
+  const totalChecked = parseFloat(document.getElementById('qc_total_checked').value) || 0;
   const el = document.getElementById('reconSummary');
-  el.innerHTML = `Checked: <b>${sumChecked}</b> pcs &nbsp;·&nbsp; Rejected: <b>${sumRejected}</b> pcs`;
+  el.innerHTML = `Checked: <b>${totalChecked}</b> pcs &nbsp;·&nbsp; Rejected: <b>${sumRejected}</b> pcs`;
   el.className = 'recon-summary ok';
-  return { totalChecked: sumChecked, totalRejected: sumRejected, sumChecked, sumRejected };
+  return { totalChecked, totalRejected: sumRejected, sumRejected };
 }
 
 document.getElementById('qcSubmitBtn').addEventListener('click', function(){
@@ -383,8 +392,8 @@ document.getElementById('qcSubmitBtn').addEventListener('click', function(){
     statusEl.style.color = '#b3401e';
     return;
   }
-  if(recon.sumChecked !== recon.totalChecked || recon.sumRejected !== recon.totalRejected){
-    statusEl.textContent = 'Row totals must exactly match Total Checked and Total Rejected above.';
+  if(recon.totalRejected > recon.totalChecked){
+    statusEl.textContent = 'Total Rejected cannot be more than Total Checked.';
     statusEl.style.color = '#b3401e';
     return;
   }
@@ -398,7 +407,6 @@ document.getElementById('qcSubmitBtn').addEventListener('click', function(){
   };
   document.querySelectorAll('.rca-row').forEach((row, i) => {
     const n = i + 1;
-    payload['qcRow' + n + '_checked'] = row.querySelector('.rca-checked').value;
     payload['qcRow' + n + '_rejected'] = row.querySelector('.rca-rejected').value;
     payload['qcRow' + n + '_reason'] = row.querySelector('.rca-reason').value;
   });
