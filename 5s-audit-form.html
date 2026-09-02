@@ -135,7 +135,6 @@
     color:#fff;
   }
   .radio-pill input:focus-visible + label{outline:2px solid var(--accent-dark);outline-offset:2px;}
-
   .criterion{
     border:1px solid var(--line);
     border-radius:8px;
@@ -205,11 +204,27 @@
   .signature{
     text-align:center;font-size:11.5px;color:var(--muted);margin-top:20px;
   }
+  .history-box{
+    display:none;
+    margin-top:16px;
+    background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:8px;
+    padding:12px 16px;
+  }
+  .history-box.visible{display:block;}
+  .history-row{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:13px;padding:4px 0;
+  }
+  .history-row + .history-row{border-top:1px solid rgba(255,255,255,.15);}
+  .history-row .l{opacity:.85;}
+  .history-row .v{font-weight:700;}
+  .history-note{font-size:11.5px;opacity:.75;margin-top:6px;}
 </style>
 </head>
 <body>
 <div class="wrap">
-
   <div class="header">
     <div class="eyebrow">Operational Excellence — 5S Audit</div>
     <h1>5S Audit — Light Engineering (IMM / GSS / LED / HAP)</h1>
@@ -219,19 +234,20 @@
       <span>2 = Partially Implemented</span>
       <span>3 = Fully Implemented</span>
     </div>
+    <div class="history-box" id="historyBox">
+      <div class="history-row"><span class="l">Previous audit (this floor)</span><span class="v" id="histPrevious">—</span></div>
+      <div class="history-row"><span class="l">This month's average (this floor)</span><span class="v" id="histAverage">—</span></div>
+      <div class="history-note" id="histNote"></div>
+    </div>
   </div>
-
   <form id="auditForm">
-
     <div class="card">
       <p class="section-title">General Information</p>
       <p class="section-sub">Basic details for this audit submission</p>
-
       <div class="field">
         <label for="email">Email <span class="req">*</span></label>
         <input type="email" id="email" name="email" placeholder="Your email" required>
       </div>
-
       <div class="field">
         <label for="floor">Floor / Area <span class="req">*</span></label>
         <select id="floor" name="floor" required>
@@ -242,17 +258,14 @@
           <option value="HAP">HAP</option>
         </select>
       </div>
-
       <div class="field">
         <label for="auditor">Auditor Name <span class="req">*</span></label>
         <input type="text" id="auditor" name="auditor" placeholder="Your answer" required>
       </div>
-
       <div class="field">
         <label for="date">Audit Date <span class="req">*</span></label>
         <input type="date" id="date" name="date" required>
       </div>
-
       <div class="field">
         <label for="shift">Shift</label>
         <select id="shift" name="shift">
@@ -263,12 +276,10 @@
         </select>
       </div>
     </div>
-
     <!-- SORT (Seiri) -->
     <div class="card">
       <p class="section-title"><span class="tag">1S</span>Sort (Seiri)</p>
       <p class="section-sub">Only necessary items are present at the workstation</p>
-
       <div class="criterion">
         <p class="q"><span class="num">1.1</span>Unnecessary items, scrap, or obsolete materials are absent from the work area</p>
         <div class="score-row">
@@ -278,7 +289,6 @@
         </div>
         <input class="note-input" type="text" name="s_1_1_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">1.2</span>Red-tag / disposal process is actively used for flagged items</p>
         <div class="score-row">
@@ -288,7 +298,6 @@
         </div>
         <input class="note-input" type="text" name="s_1_2_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">1.3</span>Walkways, aisles, and fire exits are free of clutter and obstructions</p>
         <div class="score-row">
@@ -299,12 +308,10 @@
         <input class="note-input" type="text" name="s_1_3_note" placeholder="Remarks (optional)">
       </div>
     </div>
-
     <!-- SET IN ORDER -->
     <div class="card">
       <p class="section-title"><span class="tag">2S</span>Set in Order (Seiton)</p>
       <p class="section-sub">A place for everything, and everything in its place</p>
-
       <div class="criterion">
         <p class="q"><span class="num">2.1</span>Tools, jigs, and fixtures have clearly labelled, dedicated storage locations</p>
         <div class="score-row">
@@ -314,7 +321,6 @@
         </div>
         <input class="note-input" type="text" name="s_2_1_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">2.2</span>Floor markings (lanes, WIP zones, hazard areas) are visible and followed</p>
         <div class="score-row">
@@ -324,7 +330,6 @@
         </div>
         <input class="note-input" type="text" name="s_2_2_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">2.3</span>Materials and WIP are stored at point of use in correct sequence</p>
         <div class="score-row">
@@ -335,12 +340,10 @@
         <input class="note-input" type="text" name="s_2_3_note" placeholder="Remarks (optional)">
       </div>
     </div>
-
     <!-- SHINE -->
     <div class="card">
       <p class="section-title"><span class="tag">3S</span>Shine (Seiso)</p>
       <p class="section-sub">Workplace and equipment are clean and inspection-ready</p>
-
       <div class="criterion">
         <p class="q"><span class="num">3.1</span>Machines and workstations are free of dust, oil leaks, and debris</p>
         <div class="score-row">
@@ -350,7 +353,6 @@
         </div>
         <input class="note-input" type="text" name="s_3_1_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">3.2</span>A cleaning schedule/checklist is displayed and being followed</p>
         <div class="score-row">
@@ -361,12 +363,10 @@
         <input class="note-input" type="text" name="s_3_2_note" placeholder="Remarks (optional)">
       </div>
     </div>
-
     <!-- STANDARDIZE -->
     <div class="card">
       <p class="section-title"><span class="tag">4S</span>Standardize (Seiketsu)</p>
       <p class="section-sub">Consistent visual standards and controls are in place</p>
-
       <div class="criterion">
         <p class="q"><span class="num">4.1</span>Visual standards (SOPs, labels, colour codes) are posted and current</p>
         <div class="score-row">
@@ -376,7 +376,6 @@
         </div>
         <input class="note-input" type="text" name="s_4_1_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">4.2</span>Previous audit findings have documented corrective actions with owners</p>
         <div class="score-row">
@@ -387,12 +386,10 @@
         <input class="note-input" type="text" name="s_4_2_note" placeholder="Remarks (optional)">
       </div>
     </div>
-
     <!-- SUSTAIN -->
     <div class="card">
       <p class="section-title"><span class="tag">5S</span>Sustain (Shitsuke)</p>
       <p class="section-sub">Discipline and habits keep the first four S's alive</p>
-
       <div class="criterion">
         <p class="q"><span class="num">5.1</span>Operators can explain 5S standards for their own workstation</p>
         <div class="score-row">
@@ -402,7 +399,6 @@
         </div>
         <input class="note-input" type="text" name="s_5_1_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="criterion">
         <p class="q"><span class="num">5.2</span>Daily/weekly 5S audits are conducted per schedule with no lapses</p>
         <div class="score-row">
@@ -412,28 +408,22 @@
         </div>
         <input class="note-input" type="text" name="s_5_2_note" placeholder="Remarks (optional)">
       </div>
-
       <div class="field" style="margin-top:22px;">
         <label for="overall">Overall Auditor Comments</label>
         <textarea id="overall" name="overall_comments" placeholder="Summary observations, priority actions, etc."></textarea>
       </div>
     </div>
-
     <div class="footer-actions">
       <button type="submit" class="submit-btn">Submit Audit</button>
       <p class="required-note">* Indicates required question</p>
       <p class="footer-note" id="scoreSummary"></p>
     </div>
-
   </form>
-
   <p class="signature">5S Audit — Light Engineering (IMM / GSS / LED / HAP) · Operational Excellence, AROPEX</p>
 </div>
-
 <script>
 // Paste the Web App URL you get after deploying the Apps Script here:
 const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz_92oalEw3YEloH-9wEQ7irO4lslh9kr25_gylP9JmXr5CMpYAA0bJtozHZUpMf_uF/exec";
-
 // Pre-fill Floor / Area from the ?line= parameter passed by the ALEL All Entry hub
 const urlParams = new URLSearchParams(window.location.search);
 const preLine = urlParams.get('line');
@@ -442,30 +432,97 @@ if(preLine){
   if(floorSelect){ floorSelect.value = preLine; }
 }
 
+// ---- Previous audit score + this month's average, for the chosen floor ----
+// Cross-origin fetch() GET requests to an Apps Script /exec URL get
+// blocked by browser CORS on Google's internal redirect, even though the
+// same URL works fine typed directly into the address bar. JSONP avoids
+// this: we load the response through a <script> tag (not subject to
+// CORS) and the backend wraps the JSON in a call to a global callback.
+let jsonpCounter = 0;
+function fetchJsonp(url){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'alel5sCallback_' + (++jsonpCounter) + '_' + Date.now();
+    const script = document.createElement('script');
+    let settled = false;
+    const cleanup = () => {
+      delete window[callbackName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+    const timer = setTimeout(() => {
+      if(settled) return;
+      settled = true; cleanup();
+      reject(new Error('timeout'));
+    }, 15000);
+    window[callbackName] = (data) => {
+      if(settled) return;
+      settled = true; cleanup();
+      resolve(data);
+    };
+    script.onerror = () => {
+      if(settled) return;
+      settled = true; cleanup();
+      reject(new Error('network error'));
+    };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + encodeURIComponent(callbackName);
+    document.body.appendChild(script);
+  });
+}
+function loadFloorHistory(floor){
+  const box = document.getElementById('historyBox');
+  const prevEl = document.getElementById('histPrevious');
+  const avgEl = document.getElementById('histAverage');
+  const noteEl = document.getElementById('histNote');
+  if(!floor){ box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  prevEl.textContent = 'Loading...';
+  avgEl.textContent = 'Loading...';
+  noteEl.textContent = '';
+  fetchJsonp(SHEET_ENDPOINT + '?action=5sStats&floor=' + encodeURIComponent(floor))
+    .then(data => {
+      if(data && data.previousAudit){
+        prevEl.textContent = data.previousAudit.scorePercent + '% (on ' + data.previousAudit.date + ')';
+      } else {
+        prevEl.textContent = 'No previous audit yet';
+      }
+      if(data && data.monthAverage !== null && data.monthAverage !== undefined){
+        avgEl.textContent = data.monthAverage + '% (' + data.monthCount + ' audit' + (data.monthCount === 1 ? '' : 's') + ')';
+      } else {
+        avgEl.textContent = 'No audits this month yet';
+      }
+    })
+    .catch(() => {
+      prevEl.textContent = '—';
+      avgEl.textContent = '—';
+      noteEl.textContent = 'Could not load audit history right now.';
+    });
+}
+document.getElementById('floor').addEventListener('change', function(){
+  loadFloorHistory(this.value);
+});
+if(preLine){
+  loadFloorHistory(preLine);
+}
+
 document.getElementById('auditForm').addEventListener('submit', function(e){
   e.preventDefault();
-
   const form = this;
   const btn = form.querySelector('.submit-btn');
   const summary = document.getElementById('scoreSummary');
-
   // Calculate score
   const radios = form.querySelectorAll('input[type=radio]:checked');
   let total = 0, max = 0;
   radios.forEach(r => { total += parseInt(r.value); max += 3; });
   const pct = max ? Math.round((total/max)*100) : 0;
-
   if (SHEET_ENDPOINT === "YOUR_WEB_APP_URL_HERE") {
     summary.textContent = "Setup needed: paste your Google Apps Script Web App URL into the form's code before submissions can be saved.";
     summary.style.color = "var(--warn)";
     return;
   }
-
   // Collect all form data
   const formData = new FormData(form);
   const rawData = {};
   formData.forEach((value, key) => { rawData[key] = value; });
-
   const FIELD_LABELS = {
     email: "Email",
     floor: "Floor / Area",
@@ -498,7 +555,6 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
     s_5_2_note: "5.2 Remarks",
     overall: "Overall Auditor Comments"
   };
-
   const data = {};
   Object.keys(rawData).forEach(key => {
     const label = FIELD_LABELS[key] || key;
@@ -508,12 +564,10 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
   data["Max Score"] = max;
   data["Score %"] = pct;
   data.sheet = "5S Form";
-
   btn.disabled = true;
   btn.textContent = "Submitting...";
   summary.style.color = "var(--muted)";
   summary.textContent = "";
-
   fetch(SHEET_ENDPOINT, {
     method: "POST",
     mode: "no-cors",
@@ -524,10 +578,13 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
   .then(() => {
     summary.textContent = `Submitted successfully — Score: ${total}/${max} points (${pct}%).`;
     summary.style.color = "var(--accent-dark)";
+    const submittedFloor = data["Floor / Area"];
     form.reset();
     document.querySelectorAll('.score-pill input, .radio-pill input').forEach(i => i.checked = false);
     btn.disabled = false;
     btn.textContent = "Submit Audit";
+    // Refresh the history box so it reflects the audit just submitted
+    if(submittedFloor) loadFloorHistory(submittedFloor);
   })
   .catch(() => {
     summary.textContent = "Something went wrong submitting the audit. Please try again.";
@@ -537,6 +594,5 @@ document.getElementById('auditForm').addEventListener('submit', function(e){
   });
 });
 </script>
-
 </body>
 </html>
