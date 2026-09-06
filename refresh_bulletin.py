@@ -680,6 +680,12 @@ def build_html(results, media_bytes, out_path=None):
   .msg{display:none;text-align:center;color:#cbd7e8;padding:70px 20px;font-size:16px;}
   .msg b{color:#fff;}
   .footer-note{max-width:1240px;margin:8px auto 0;padding:0 20px;color:#6f83a3;font-size:11.5px;text-align:center;}
+  .to-top{position:fixed;right:16px;bottom:18px;z-index:80;width:46px;height:46px;border-radius:14px;
+          border:0;cursor:pointer;display:none;align-items:center;justify-content:center;color:#fff;
+          background:linear-gradient(135deg,#12b886,#0e9f7a);box-shadow:0 10px 24px -8px rgba(14,159,122,.7);
+          opacity:0;transform:translateY(12px);transition:.25s;}
+  .to-top.show{opacity:1;transform:none;}
+  .to-top:active{transform:scale(.93);}
 
   /* ============================================================
      OPERATION CARDS (mobile-friendly alt to the wide table)
@@ -715,38 +721,42 @@ def build_html(results, media_bytes, out_path=None):
 
   /* ---------- mobile ---------- */
   @media (max-width:820px){
-    .topbar-inner{padding:10px 12px;gap:10px;}
-    .logo{width:38px;height:38px;border-radius:11px;}
-    .brand-h h1{font-size:14.5px;}
-    .brand-h h1 small{font-size:9.5px;}
-    .searchbox{flex:1 1 100%;order:5;padding:10px 13px;border-radius:12px;}
-    .searchbox input{font-size:16px;padding:4px 0;}   /* 16px prevents iOS zoom */
+    .topbar-inner{padding:8px 12px 4px;gap:8px;align-items:center;}
+    .logo{width:36px;height:36px;border-radius:10px;}
+    .brand-h h1{font-size:13.5px;line-height:1.05;}
+    .brand-h h1 small{display:none;}
+    .stat{font-size:10.5px;margin-left:auto;}
+    .stat b{font-size:13px;}
+    .tbtns{gap:6px;}
+    .tbtn{flex:none;width:40px;height:38px;padding:0;justify-content:center;border-radius:11px;}
+    .tbtn span:not(.auto-dot){display:none;}          /* icon-only buttons */
+    .tbtn svg{width:18px;height:18px;}
+    .searchbox{flex:1 1 100%;order:10;margin-top:2px;padding:9px 13px;border-radius:11px;}
+    .searchbox input{font-size:16px;padding:3px 0;}   /* 16px prevents iOS zoom */
     .kbd{display:none;}
-    .stat{font-size:11.5px;}
-    .stat b{font-size:14px;}
-    .tbtns{gap:7px;}
-    .tbtn{padding:9px 12px;font-size:12px;border-radius:11px;}
-    .tbtn svg{width:17px;height:17px;}
-    .refresh-note{font-size:10px;padding:0 14px 9px;line-height:1.5;}
-    .chips{padding:0 12px 10px;gap:6px;}
-    .chip{padding:8px 12px;font-size:12px;}
-    main{padding:0 10px;margin:12px auto 0;}
+    .refresh-note{display:none;}
+    /* chips = ONE horizontally scrollable line, never wraps tall */
+    .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;
+           padding:8px 12px 10px;scrollbar-width:none;margin:0;}
+    .chips::-webkit-scrollbar{display:none;}
+    .chip{flex:0 0 auto;white-space:nowrap;padding:8px 13px;font-size:12px;}
+    main{padding:0 10px;margin:10px auto 0;}
     .toolbar-row{display:none;}
     .bulletin{margin:0 0 14px;border-radius:14px;}
-    .b-head{padding:14px 14px;gap:10px;}
+    .b-head{padding:13px 14px;gap:10px;}
     .b-eyebrow{font-size:9px;}
     .b-title{font-size:19px;}
     .b-sub{font-size:10.5px;line-height:1.4;}
     .b-chips{gap:6px;}
     .pill{font-size:10px;padding:4px 9px;}
     .b-body{padding:12px 14px;gap:12px;}
-    .photo{flex:0 0 92px;width:92px;height:104px;border-radius:11px;padding:6px;}
+    .photo{flex:0 0 88px;width:88px;height:100px;border-radius:11px;padding:6px;}
     .photo-tag{display:none;}
-    .b-info{flex:1 1 200px;min-width:0;}
+    .b-info{flex:1 1 190px;min-width:0;}
     .kv{grid-template-columns:1fr;gap:1px;padding:5px 0;}
     .kv-i{font-size:10.5px;}
     .kv-i svg{width:12px;height:12px;}
-    .kv-v{font-size:13.5px;line-height:1.35;}
+    .kv-v{font-size:13px;line-height:1.35;}
     .g-tag{font-size:11px;padding:2px 8px;}
     .kpis{grid-template-columns:repeat(2,1fr);gap:8px;margin-top:11px;}
     .kpi{padding:9px 10px;border-radius:12px;}
@@ -768,6 +778,15 @@ def build_html(results, media_bytes, out_path=None):
     .signoff div{font-size:10px;}
     .ops-wrap .tw{display:none;}          /* cards already shown */
     .msg{padding:40px 14px;}
+  }
+  /* auto-hide sticky header when scrolling down on mobile */
+  @media (max-width:820px){
+    .topbar{transition:transform .28s ease;will-change:transform;}
+    body.hide-top .topbar{transform:translateY(-105%);}
+    .to-top{display:flex;}
+  }
+  @media (min-width:821px){
+    .to-top{display:none;}
   }
   @media (max-width:360px){
     .b-title{font-size:17px;}
@@ -816,6 +835,9 @@ def build_html(results, media_bytes, out_path=None):
   %BULLETINS%
   <div class="msg" id="msg"><b>No bulletins found.</b><br>Try another SKU, item code or category.</div>
 </main>
+<button class="to-top" id="toTop" type="button" title="Back to top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
 <div class="footer-note">ALEL Industries Limited &middot; Industrial Engineering &middot; Operation Bulletin v2.0 &middot; For internal use</div>
 <script>
 (function(){
@@ -967,6 +989,27 @@ def build_html(results, media_bytes, out_path=None):
     });
   }
   buildOpCards();
+
+  /* ---------- mobile: hide header while scrolling down, show on up; back-to-top ---------- */
+  var lastY = window.pageYOffset || 0;
+  var toTopBtn = document.getElementById('toTop');
+  function isMobile(){ return window.innerWidth <= 820; }
+  window.addEventListener('scroll', function(){
+    var y = window.pageYOffset || 0;
+    var bodyH = document.body.scrollHeight;
+    if(isMobile()){
+      // hide header only after scrolling a bit; show again when scrolling up
+      if(y > 90 && y > lastY){ document.body.classList.add('hide-top'); }
+      else if(y < lastY || y < 10){ document.body.classList.remove('hide-top'); }
+    } else {
+      document.body.classList.remove('hide-top');
+    }
+    if(y > 500) toTopBtn.classList.add('show'); else toTopBtn.classList.remove('show');
+    lastY = y;
+  }, {passive:true});
+  toTopBtn.addEventListener('click', function(){
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
 
   /* ---------- refresh / auto-reload ---------- */
   var autoTimer = null;
