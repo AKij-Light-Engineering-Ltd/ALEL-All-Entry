@@ -15,6 +15,7 @@ import io
 import json
 import base64
 import zipfile
+import hashlib
 import urllib.request
 import datetime
 
@@ -34,6 +35,38 @@ CHECKER_BY_SECTION = {
     "HAP": {"name": "Abdullah Al-Mamun", "email": "almamun@akijlightengineering.com"},
 }
 STORE_KEY = "alel_approvals_v1"
+
+# ---------------- Login users ----------------
+# role: admin | prepared | checker | approver
+# section (for checker): GSS | LED | HAP
+USERS = [
+    {"id": "admin",     "name": "Administrator",        "role": "admin",     "section": "", "pass": "admin123"},
+    {"id": "anoy",      "name": "Anoy Kumar Das",       "role": "prepared",  "section": "", "pass": "anoy123"},
+    {"id": "jhgss",     "name": "Jhumour Rani",         "role": "checker",   "section": "GSS", "pass": "gss123"},
+    {"id": "kkled",     "name": "Kajal Kanti",          "role": "checker",   "section": "LED", "pass": "led123"},
+    {"id": "amhap",     "name": "Abdullah Al-Mamun",    "role": "checker",   "section": "HAP", "pass": "hap123"},
+    {"id": "planthead", "name": "Md. Moshfequr Rahman", "role": "approver",  "section": "", "pass": "head123"},
+]
+USER_SESSION_KEY = "alel_login_v1"
+
+
+def login_user_db():
+    db = []
+    for u in USERS:
+        h = hashlib.sha256(u["pass"].encode("utf-8")).hexdigest()
+        db.append({"id": u["id"], "name": u["name"], "role": u["role"],
+                   "section": u["section"], "hash": h})
+    return db
+
+
+def creds_html():
+    rows = "".join(
+        f'<tr><td>{esc(u["id"])}</td><td>{esc(u["role"])}'
+        + (f' ({esc(u["section"])})' if u.get("section") else "")
+        + f'</td><td><code>{esc(u["pass"])}</code></td></tr>'
+        for u in USERS)
+    return ('<table><tr><th>ID</th><th>Role</th><th>Password</th></tr>'
+            + rows + "</table>")
 
 
 def log(msg):
@@ -574,6 +607,7 @@ def build_html(results, media_bytes, out_path=None):
         return json.dumps(obj, ensure_ascii=False).replace("</", "<\\/")
     cat_json = js_json(catalog)
     people_json = js_json(people)
+    users_json = js_json(login_user_db())
 
     html_doc = HTML_TEMPLATE.replace("%BULLETINS%", "".join(bullets)) \
                             .replace("%CHIPS%", chip_html) \
@@ -581,6 +615,8 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%REFRESHED%", today) \
                             .replace("%CATALOG%", cat_json) \
                             .replace("%PEOPLE%", people_json) \
+                            .replace("%USERS%", users_json) \
+                            .replace("%CREDS%", creds_html()) \
                             .replace("%ICON_SEARCH%", IC["search"]) \
                             .replace("%ICON_REFRESH%", IC["refresh"])
     dest = out_path or OUT_HTML
@@ -651,10 +687,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 8px 20px -6px rgba(14,159,122,.55);}
   .brand-h h1{font-family:'Sora',sans-serif;font-size:15px;line-height:1.1;min-width:0;}
   .brand-h h1 small{display:block;font-weight:500;font-size:9.5px;letter-spacing:.14em;color:#9fb3d0;text-transform:uppercase;}
-  .who{display:flex;align-items:center;gap:6px;margin-left:auto;color:#cfd9ea;}
-  .who label{font-size:11px;color:#8fa0bb;}
-  .who select{background:#16233d;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;
-              padding:7px 8px;font-size:12px;max-width:200px;outline:none;}
+  .who{display:flex;align-items:center;gap:8px;margin-left:auto;color:#cfd9ea;}
+  .who-user{font-size:11.5px;font-weight:700;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+            border-radius:10px;padding:6px 10px;white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis;}
+  .logout{background:rgba(255,255,255,.1);color:#ffd1a8;border:1px solid rgba(255,255,255,.25);border-radius:10px;
+          padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+  .logout:hover{background:#c0392b;color:#fff;border-color:#c0392b;}
   .tbtns{display:flex;gap:6px;}
   .tbtn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;
         border:1px solid rgba(255,255,255,.2);border-radius:11px;padding:8px 11px;font-size:12px;font-weight:700;
@@ -844,6 +882,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .msg{display:none;text-align:center;color:#cbd7e8;padding:50px 20px;}
   .foot{max-width:1280px;margin:10px auto;padding:0 16px;color:#6f83a3;font-size:11px;text-align:center;}
 
+  /* ---------- login overlay ---------- */
+  .login{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+         padding:16px;background:radial-gradient(900px 500px at 80% -10%,rgba(124,92,240,.28),transparent 55%),
+         radial-gradient(700px 400px at -10% 110%,rgba(14,159,122,.25),transparent 55%),
+         linear-gradient(160deg,#0b1020,#111a30);}
+  .login-card{width:100%;max-width:400px;background:#fff;border-radius:20px;padding:28px 26px;
+              box-shadow:0 30px 80px -20px rgba(0,0,0,.6);animation:rise .4s ease;}
+  .login-logo{width:58px;height:58px;border-radius:16px;margin:0 auto 12px;display:grid;place-items:center;
+              font-size:28px;background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 12px 26px -8px rgba(14,159,122,.6);}
+  .login-card h2{font-family:'Sora',sans-serif;text-align:center;font-size:20px;color:var(--ink);}
+  .login-card > p{text-align:center;color:var(--mut);font-size:12.5px;margin:4px 0 4px;}
+  .login-hint{text-align:center;font-size:11px;color:#b45309;font-weight:700;margin:2px 0 14px;}
+  .login-f{display:grid;gap:6px;margin-top:6px;}
+  .login-f label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;}
+  .login-f input{padding:11px 12px;border:1px solid var(--line2);border-radius:11px;font-size:14px;outline:none;font-family:inherit;}
+  .login-f input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,159,122,.15);}
+  .login-err{color:#c0392b;font-size:12px;font-weight:700;min-height:16px;}
+  .login-f button#loginBtn{padding:12px;border:0;border-radius:11px;background:linear-gradient(135deg,#12b886,#0b7a5f);
+        color:#fff;font-weight:800;font-size:14px;cursor:pointer;margin-top:4px;}
+  .login-f button#loginBtn:hover{filter:brightness(1.06);}
+  .hint-btn{background:none;border:none;color:#7c8ba0;font-size:11px;cursor:pointer;text-decoration:underline dotted;margin-top:6px;}
+  .creds{display:none;margin-top:12px;background:#f4f7fb;border:1px solid var(--line);border-radius:12px;padding:10px;max-height:220px;overflow:auto;}
+  .creds table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .creds th{text-align:left;color:var(--mut);padding:3px 6px;border-bottom:1px solid var(--line2);font-size:10px;text-transform:uppercase;}
+  .creds td{padding:4px 6px;border-bottom:1px solid var(--soft);}
+  .creds code{background:#e8edf5;border-radius:6px;padding:1px 6px;font-size:10.5px;}
+
   @media (min-width:821px){
     .opc:hover{transform:translateX(2px);}
     .kpis{grid-template-columns:repeat(5,1fr);}
@@ -892,8 +957,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="tb-row1">
       <div class="brand-h"><div class="logo">&#9889;</div>
         <h1>ALEL Operation Bulletin<small>ENOVAR &middot; Searchable &middot; Approval</small></h1></div>
-      <div class="who"><label>Acting as</label>
-        <select id="actor"></select></div>
+      <div class="who" id="whoBox">
+        <span class="who-user" id="whoUser"></span>
+        <button class="logout" id="logoutBtn" type="button">Logout</button>
+      </div>
       <div class="tbtns">
         <button class="tbtn" id="autoBtn" type="button"><span class="auto-dot"></span><span class="lb" id="autoLab">Auto 1m</span></button>
         <button class="tbtn refresh" id="refreshBtn" type="button">%ICON_REFRESH%<span class="lb">Refresh</span></button>
@@ -906,9 +973,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
       <div class="sugg" id="sugg"></div>
     </div>
-    <div class="tb-note">Approval: <b>Prepared (Anoy)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; choose your name above to act &middot; Refreshed <b>%REFRESHED%</b></div>
+    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b></div>
   </div>
   <div class="chips" id="chips">%CHIPS%</div>
+</div>
+
+<!-- login overlay -->
+<div class="login" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">&#9889;</div>
+    <h2>ALEL Operation Bulletin</h2>
+    <p>Sign in to review &amp; approve bulletins</p>
+    <div class="login-hint">Use your assigned ID &amp; password</div>
+    <div class="login-f">
+      <label>User ID</label>
+      <input id="loginId" type="text" autocomplete="username" placeholder="e.g. jhgss, planthead, admin">
+      <label>Password</label>
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="Password">
+      <div class="login-err" id="loginErr"></div>
+      <button id="loginBtn" type="button">Sign In</button>
+      <button class="hint-btn" id="showCreds" type="button">Show demo accounts</button>
+    </div>
+    <div class="creds" id="credsList">%CREDS%</div>
+  </div>
 </div>
 <main>
   <div class="statbar">
@@ -928,27 +1015,101 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="foot">ALEL Industries Limited &middot; Industrial Engineering &middot; Operation Bulletin v3.0</div>
 <script id="data-cat" type="application/json">%CATALOG%</script>
 <script id="data-people" type="application/json">%PEOPLE%</script>
+<script id="data-users" type="application/json">%USERS%</script>
 <script>
 (function(){
   var CATALOG = JSON.parse(document.getElementById('data-cat').textContent || '[]');
   var PEOPLE = JSON.parse(document.getElementById('data-people').textContent || '[]');
+  var USERS = JSON.parse(document.getElementById('data-users').textContent || '[]');
   var STORE = {};
   try{ STORE = JSON.parse(localStorage.getItem('alel_approvals_v1')||'{}'); }catch(e){}
+  var SESSION = null;   // {id,name,role,section}
+  try{ var s=localStorage.getItem('alel_login_v1'); if(s){ SESSION=JSON.parse(s); } }catch(e){}
 
   var bullets = Array.prototype.slice.call(document.querySelectorAll('.bulletin'));
   var qEl=document.getElementById('q'), clr=document.getElementById('clr'),
       sugg=document.getElementById('sugg'), cntEl=document.getElementById('cnt'),
       cntP=document.getElementById('cntPend'), cntA=document.getElementById('cntApr'),
       chipsEl=document.getElementById('chips'), msg=document.getElementById('msg'),
-      actorEl=document.getElementById('actor');
+      whoBox=document.getElementById('whoBox'), whoUser=document.getElementById('whoUser'),
+      logoutBtn=document.getElementById('logoutBtn');
   var activeGroup='all', activeView='all';
   var codeOf = {}; bullets.forEach(function(b){ codeOf[b.getAttribute('data-code')]=b; });
 
-  /* ---------- acting-as selector ---------- */
-  PEOPLE.forEach(function(p){ var o=document.createElement('option'); o.value=p.k; o.textContent=p.l; actorEl.appendChild(o); });
-  var savedActor=''; try{ savedActor=localStorage.getItem('alel_actor')||''; }catch(e){}
-  if(savedActor){ actorEl.value=savedActor; }
-  actorEl.addEventListener('change', function(){ try{ localStorage.setItem('alel_actor', actorEl.value); }catch(e){} refreshWF(); });
+  /* ---------- login ---------- */
+  function sha256Hex(str){
+    // synchronous-ish using a tiny sha-256 via SubtleCrypto when https available
+    return new Promise(function(resolve){
+      if(window.crypto && crypto.subtle){
+        crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function(buf){
+          resolve(Array.from(new Uint8Array(buf)).map(function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''));
+        }).catch(function(){ resolve(fallbackHash(str)); });
+      } else resolve(fallbackHash(str));
+    });
+  }
+  function fallbackHash(s){ // FNV-1a hex (used only if no WebCrypto)
+    var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+    return ('00000000'+(h>>>0).toString(16)).slice(-8);
+  }
+  var overlay=document.getElementById('loginOverlay'),
+      loginId=document.getElementById('loginId'), loginPass=document.getElementById('loginPass'),
+      loginErr=document.getElementById('loginErr'), loginBtn=document.getElementById('loginBtn'),
+      credsList=document.getElementById('credsList'), showCreds=document.getElementById('showCreds');
+  function showLogin(){ overlay.style.display='flex'; document.body.style.overflow='hidden'; }
+  function hideLogin(){ overlay.style.display='none'; document.body.style.overflow=''; }
+  function applySession(){
+    if(SESSION){ hideLogin(); whoUser.textContent = SESSION.name + ' \u00b7 ' + SESSION.role; }
+    else { whoUser.textContent=''; }
+    refreshWF();
+  }
+  logoutBtn.addEventListener('click', function(){
+    SESSION=null; try{ localStorage.removeItem('alel_login_v1'); }catch(e){}
+    loginPass.value=''; loginErr.textContent=''; applySession(); showLogin();
+  });
+  showCreds.addEventListener('click', function(){
+    credsList.style.display = credsList.style.display==='block' ? 'none' : 'block';
+  });
+  loginBtn.addEventListener('click', doLogin);
+  [loginId, loginPass].forEach(function(i){ i.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); }); });
+  function doLogin(){
+    var id=(loginId.value||'').trim().toLowerCase();
+    var pw=loginPass.value||'';
+    if(!id||!pw){ loginErr.textContent='Enter ID and password'; return; }
+    sha256Hex(pw).then(function(h){
+      var u=USERS.filter(function(x){ return x.id===id; })[0];
+      if(!u){ loginErr.textContent='Unknown user ID'; return; }
+      if(u.hash!==h){ loginErr.textContent='Wrong password'; return; }
+      SESSION={id:u.id,name:u.name,role:u.role,section:u.section};
+      try{ localStorage.setItem('alel_login_v1', JSON.stringify(SESSION)); }catch(e){}
+      loginErr.textContent=''; loginId.value=''; loginPass.value='';
+      // role default views
+      activeView = SESSION.role==='approver' ? 'appr' : 'all';
+      setView(activeView);
+      applySession();
+    });
+  }
+  // bootstrap
+  if(!SESSION){ showLogin(); }
+  else { applySession(); }
+
+  /* ---------- role helpers ---------- */
+  function canSee(b){
+    if(!SESSION) return false;
+    if(SESSION.role==='admin'||SESSION.role==='prepared') return true;
+    if(SESSION.role==='approver') return true;            // sees all, but filters to pending in view
+    if(SESSION.role==='checker'){
+      return b.getAttribute('data-sec').toUpperCase()===SESSION.section.toUpperCase();
+    }
+    return false;
+  }
+  function isMyTurn(b, stage){ // stage 'p'|'c'|'a'
+    if(!SESSION) return false;
+    if(SESSION.role==='admin') return true;
+    if(stage==='p') return SESSION.role==='prepared';
+    if(stage==='c') return SESSION.role==='checker' && b.getAttribute('data-sec').toUpperCase()===SESSION.section.toUpperCase();
+    if(stage==='a') return SESSION.role==='approver';
+    return false;
+  }
 
   /* ---------- search suggestions ---------- */
   var cur=0;
@@ -1012,11 +1173,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     var t=(qEl.value||'').trim().toLowerCase();
     var n=0, np=0, na=0;
     bullets.forEach(function(b){
-      var show=true;
-      if(activeGroup!=='all' && b.getAttribute('data-group')!==activeGroup) show=false;
+      var show = SESSION ? canSee(b) : false;
+      if(show && activeGroup!=='all' && b.getAttribute('data-group')!==activeGroup) show=false;
       var s=stOf(b);
-      if(activeView==='pend' && !(s.a===0)) show=false;
-      if(activeView==='appr' && !(s.a===1)) show=false;
+      if(show && activeView==='pend' && s.a===1) show=false;
+      if(show && activeView==='appr' && !(s.a===1)) show=false;
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'',
             sc=b.getAttribute('data-sec')||'', sh=b.getAttribute('data-sheet')||'';
@@ -1074,7 +1235,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
   /* ---------- workflow buttons ---------- */
   function refreshWF(){
-    var me=actorEl.value;
     bullets.forEach(function(b){
       var s=stOf(b);
       var sec=(b.getAttribute('data-sec')||'').toUpperCase();
@@ -1082,13 +1242,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       var stP=b.querySelector('.wf-step[data-role=prepared]');
       var stC=b.querySelector('.wf-step[data-role=checked]');
       var stA=b.querySelector('.wf-step[data-role=approved]');
-      var hint=b.querySelector('.wf-hint');
-      // remove old buttons + hint
+      // remove old buttons + hints
       [stP,stC,stA].forEach(function(st){ if(!st)return; var h=st.querySelector('.wf-hint'); if(h)h.remove(); var ab=st.querySelector('.wf-btn'); if(ab)ab.remove(); });
-      // ---- prepared step (auto by Anoy) ----
+      // ---- prepared step ----
       stP.classList.toggle('st-done', !!s.p);
       var pillP=stP.querySelector('[data-role=pill]');
-      pillP.textContent = s.p?'Signed by Anoy':'Pending';
+      pillP.textContent = s.p?'Signed':'Pending';
       pillP.className='st-pill';
       // ---- checked step ----
       var pillC=stC.querySelector('[data-role=pill]');
@@ -1106,29 +1265,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       ap.className='aprv '+(s.a?'a-done':s.c?'a-pend':s.p?'a-prep':'');
       ap.textContent=s.a?'Approved':s.c?'With Approver':s.p?'With Checker':'Preparing';
 
-      // ---- decide current actor's buttons ----
-      if(s.a){ // fully done
-        addBtn(b, stA, function(){ clearOne(b,'a'); }, 'Undo Approval', 'ghost');
+      // ---- action buttons gated by logged-in role ----
+      if(!SESSION){ return; }
+      if(s.a){
+        if(isMyTurn(b,'a')){ addBtn(b, stA, function(){ setState(s.code,'a',0); refreshWF(); }, 'Undo Approval', 'ghost'); }
         return;
       }
-      // prepared step done? if not and me is Anoy -> sign prepared
       if(!s.p){
-        if(me===PREPARED){ addBtn(b, stP, function(){ setState(s.code,'p',1); refreshWF(); }, 'Sign as Prepared', 'ck'); }
+        if(isMyTurn(b,'p')){ addBtn(b, stP, function(){ setState(s.code,'p',1); refreshWF(); }, 'Sign as Prepared', 'ck'); }
         return;
       }
-      // checked pending -> checker acts
       if(!s.c){
-        if(me===ck && ck){ addBtn(b, stC, function(){ setState(s.code,'c',1); refreshWF(); }, 'Check & Send to Approve', 'ck'); }
+        if(isMyTurn(b,'c') && ck){ addBtn(b, stC, function(){ setState(s.code,'c',1); refreshWF(); }, 'Check & Send to Approve', 'ck'); }
         else { addHint(stC, nextWho(ck)); }
         return;
       }
-      // approved pending -> plant head acts
-      if(me===APPROVER){ addBtn(b, stA, function(){ setState(s.code,'a',1); refreshWF(); }, 'Approve Final', 'ap'); }
-      else { addHint(stA, nextWho(APPROVER)); }
+      if(isMyTurn(b,'a')){ addBtn(b, stA, function(){ setState(s.code,'a',1); refreshWF(); }, 'Approve Final', 'ap'); }
+      else { addHint(stA, nextWho('Md. Moshfequr Rahman')); }
     });
     apply();
   }
-  var PREPARED='Anoy Kumar Das', APPROVER='Md. Moshfequr Rahman';
   function nextWho(name){
     var el=document.createElement('div'); el.className='wf-hint';
     el.textContent='Waiting for '+name;
