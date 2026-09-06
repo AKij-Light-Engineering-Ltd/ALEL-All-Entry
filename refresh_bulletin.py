@@ -436,14 +436,15 @@ def build_html(results, media_bytes, out_path=None):
             f'<span class="pill rev">Rev 00</span>'
             f'</div></div>'
             f'<div class="b-body">'
-            f'{img_html}'
             f'<div class="b-info">'
             f'<div class="kv"><span class="kv-i">{ICONS["folder"]} Product Name / SKU</span><span class="kv-v">{esc(name)}</span></div>'
             f'<div class="kv"><span class="kv-i">{ICONS["code"]} Item Code</span><span class="kv-v code">{code or "&ndash;"}</span></div>'
             f'<div class="kv"><span class="kv-i">{ICONS["sheet"]} Product Group</span><span class="kv-v"><span class="g-tag">{esc(group) or "&ndash;"}</span></span></div>'
             f'<div class="kv"><span class="kv-i">{ICONS["sheet"]} Worksheet</span><span class="kv-v dim">{esc(r["sheet"])}</span></div>'
             f'<div class="kpis">{kpis}</div>'
-            f'</div></div>'
+            f'</div>'
+            f'{img_html}'
+            f'</div>'
             f'<div class="ops-wrap">'
             f'<div class="block-h"><span class="block-title">Operation Sequence &amp; Time Study</span>'
             f'<span class="ops-count">{len(ops)} operations</span></div>'
@@ -499,6 +500,7 @@ def build_html(results, media_bytes, out_path=None):
     --r:16px;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;}
   html{scroll-behavior:smooth;}
   body{font-family:'Inter',system-ui,'Segoe UI',Arial,sans-serif;color:var(--ink);
        background:
@@ -587,15 +589,15 @@ def build_html(results, media_bytes, out_path=None):
         border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);backdrop-filter:blur(4px);}
   .pill.ob{background:#ffd166;color:#5b3a00;border-color:transparent;}
   .pill.date,.pill.rev{color:#e9f0f9;}
-  .b-body{display:flex;gap:20px;padding:20px 24px;flex-wrap:wrap;}
+  .b-body{display:flex;align-items:flex-start;gap:20px;padding:20px 24px;}
+  .b-info{flex:1 1 auto;min-width:0;}
   .photo{flex:0 0 190px;width:190px;height:210px;border:1px solid var(--line);border-radius:14px;
          padding:10px;background:linear-gradient(180deg,#fff,var(--soft));position:relative;
-         display:flex;align-items:center;justify-content:center;}
+         display:flex;align-items:center;justify-content:center;order:2;margin-left:auto;}
   .photo img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(20,40,70,.12));}
   .photo-tag{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);font-size:8.5px;
              letter-spacing:.2em;color:#8fa0b8;background:#eef2f8;border-radius:99px;padding:2px 9px;}
   .photo.empty{border-style:dashed;color:#9fb0c4;}
-  .b-info{flex:1 1 420px;min-width:300px;}
   .kv{display:grid;grid-template-columns:230px 1fr;gap:10px;padding:7px 2px;border-bottom:1px solid var(--soft);}
   .kv-i{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;}
   .kv-i svg{color:var(--teal);}
@@ -749,10 +751,10 @@ def build_html(results, media_bytes, out_path=None):
     .b-sub{font-size:10.5px;line-height:1.4;}
     .b-chips{gap:6px;}
     .pill{font-size:10px;padding:4px 9px;}
-    .b-body{padding:12px 14px;gap:12px;}
-    .photo{flex:0 0 88px;width:88px;height:100px;border-radius:11px;padding:6px;}
+    .b-body{padding:12px 14px;gap:10px;}
+    .photo{flex:0 0 84px;width:84px;height:96px;border-radius:11px;padding:5px;margin-left:auto;}
     .photo-tag{display:none;}
-    .b-info{flex:1 1 190px;min-width:0;}
+    .b-info{flex:1 1 auto;min-width:0;}
     .kv{grid-template-columns:1fr;gap:1px;padding:5px 0;}
     .kv-i{font-size:10.5px;}
     .kv-i svg{width:12px;height:12px;}
