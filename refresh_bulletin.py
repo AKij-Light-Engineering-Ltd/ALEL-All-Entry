@@ -681,13 +681,97 @@ def build_html(results, media_bytes, out_path=None):
   .msg b{color:#fff;}
   .footer-note{max-width:1240px;margin:8px auto 0;padding:0 20px;color:#6f83a3;font-size:11.5px;text-align:center;}
 
-  /* mobile */
-  @media (max-width:700px){
-    .brand-h h1{font-size:15px;}
-    .photo{flex-basis:100%;width:100%;height:190px;}
-    .kv{grid-template-columns:1fr;gap:2px;}
-    .b-body,.b-head,.ops-wrap{padding-left:14px;padding-right:14px;}
-    .signoff{grid-template-columns:1fr;gap:26px;}
+  /* ============================================================
+     OPERATION CARDS (mobile-friendly alt to the wide table)
+     ============================================================ */
+  .opcards{display:none;}
+  @media (max-width:820px){
+    .opcards{display:block;}
+    .tw{display:none;}
+    .oc-card{background:#fff;border:1px solid var(--line);border-radius:12px;margin:0 0 9px;
+             overflow:hidden;}
+    .oc-top{display:flex;align-items:center;gap:10px;padding:9px 12px;
+            background:linear-gradient(180deg,#fff,var(--soft));cursor:pointer;}
+    .oc-no{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+           background:var(--navy);color:#fff;font-weight:800;font-size:12.5px;}
+    .oc-title{flex:1;font-size:13px;font-weight:700;line-height:1.35;color:var(--ink);}
+    .oc-smv{flex:none;text-align:right;}
+    .oc-smv b{display:block;font-family:'Sora',sans-serif;font-size:15px;color:var(--teal-d);}
+    .oc-smv span{font-size:8.5px;color:#8fa0b8;text-transform:uppercase;letter-spacing:.05em;}
+    .oc-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 9px;}
+    .oc-chip{font-size:10.5px;font-weight:600;color:#42536a;background:#eef2f8;border:1px solid var(--line);
+             border-radius:99px;padding:3px 9px;}
+    .oc-chip b{color:var(--navy);}
+    .oc-body{display:none;padding:2px 12px 11px;border-top:1px dashed var(--line);}
+    .oc-card.open .oc-body{display:block;}
+    .oc-body .ocg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:9px;}
+    .oc-item{background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:5px 8px;}
+    .oc-item span{display:block;font-size:8.5px;color:#8fa0b8;text-transform:uppercase;letter-spacing:.04em;}
+    .oc-item b{font-size:12.5px;color:#24364c;}
+    .oc-item.wide{grid-column:1/-1;}
+    .oc-caret{margin-left:auto;color:#7c8ba0;flex:none;transition:.2s;}
+    .oc-card.open .oc-caret{transform:rotate(180deg);}
+  }
+
+  /* ---------- mobile ---------- */
+  @media (max-width:820px){
+    .topbar-inner{padding:10px 12px;gap:10px;}
+    .logo{width:38px;height:38px;border-radius:11px;}
+    .brand-h h1{font-size:14.5px;}
+    .brand-h h1 small{font-size:9.5px;}
+    .searchbox{flex:1 1 100%;order:5;padding:10px 13px;border-radius:12px;}
+    .searchbox input{font-size:16px;padding:4px 0;}   /* 16px prevents iOS zoom */
+    .kbd{display:none;}
+    .stat{font-size:11.5px;}
+    .stat b{font-size:14px;}
+    .tbtns{gap:7px;}
+    .tbtn{padding:9px 12px;font-size:12px;border-radius:11px;}
+    .tbtn svg{width:17px;height:17px;}
+    .refresh-note{font-size:10px;padding:0 14px 9px;line-height:1.5;}
+    .chips{padding:0 12px 10px;gap:6px;}
+    .chip{padding:8px 12px;font-size:12px;}
+    main{padding:0 10px;margin:12px auto 0;}
+    .toolbar-row{display:none;}
+    .bulletin{margin:0 0 14px;border-radius:14px;}
+    .b-head{padding:14px 14px;gap:10px;}
+    .b-eyebrow{font-size:9px;}
+    .b-title{font-size:19px;}
+    .b-sub{font-size:10.5px;line-height:1.4;}
+    .b-chips{gap:6px;}
+    .pill{font-size:10px;padding:4px 9px;}
+    .b-body{padding:12px 14px;gap:12px;}
+    .photo{flex:0 0 92px;width:92px;height:104px;border-radius:11px;padding:6px;}
+    .photo-tag{display:none;}
+    .b-info{flex:1 1 200px;min-width:0;}
+    .kv{grid-template-columns:1fr;gap:1px;padding:5px 0;}
+    .kv-i{font-size:10.5px;}
+    .kv-i svg{width:12px;height:12px;}
+    .kv-v{font-size:13.5px;line-height:1.35;}
+    .g-tag{font-size:11px;padding:2px 8px;}
+    .kpis{grid-template-columns:repeat(2,1fr);gap:8px;margin-top:11px;}
+    .kpi{padding:9px 10px;border-radius:12px;}
+    .kpi-ic{width:27px;height:27px;border-radius:8px;}
+    .kpi-lab{font-size:9px;}
+    .kpi-val{font-size:17px;margin-top:6px;}
+    .mp-ctrl{margin-top:7px;gap:5px;}
+    .mp-btn{flex:0 0 38px;height:38px;font-size:20px;border-radius:10px;}
+    .mp-input{height:38px;font-size:17px;}
+    .kpi.ops .kpi-val{font-size:15px;}
+    .ops-wrap{padding:0 14px 6px;}
+    .alloc{margin:0 14px 4px;}
+    .block-h{margin:8px 0;}
+    .block-title{font-size:11px;}
+    .ops-count{font-size:10px;}
+    .alloc ul{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;}
+    .alloc li{font-size:11px;padding:5px 9px;}
+    .signoff{padding:18px 14px 18px;gap:16px;}
+    .signoff div{font-size:10px;}
+    .ops-wrap .tw{display:none;}          /* cards already shown */
+    .msg{padding:40px 14px;}
+  }
+  @media (max-width:360px){
+    .b-title{font-size:17px;}
+    .kpis{grid-template-columns:1fr 1fr;}
   }
   /* print */
   @media print{
@@ -697,7 +781,8 @@ def build_html(results, media_bytes, out_path=None):
     .bulletin{box-shadow:none;margin:0 0 10px;border-radius:0;animation:none;opacity:1;transform:none;
               break-after:page;}
     .b-head{border-radius:0;}
-    .tw{overflow:visible;border:0;}
+    .tw{display:block !important;overflow:visible;border:0;}
+    .opcards{display:none !important;}
     table.ops th{position:static;}
     .kpi:hover{transform:none;box-shadow:none;}
     @page{size:A4 landscape;margin:8mm;}
@@ -824,6 +909,64 @@ def build_html(results, media_bytes, out_path=None):
     }); }
   }
   document.querySelectorAll('.kpi.mp .mp-input').forEach(function(i){ bindMP(i.closest('.kpi')); });
+
+  /* ---------- mobile operation cards (built from the table) ---------- */
+  function buildOpCards(){
+    document.querySelectorAll('.bulletin .ops-wrap').forEach(function(wrap){
+      if(wrap.querySelector('.opcards')) return;          // only once
+      var box = document.createElement('div');
+      box.className = 'opcards';
+      var table = wrap.querySelector('table.ops');
+      if(!table) return;
+      table.querySelectorAll('tbody tr:not(.total)').forEach(function(tr){
+        var td = tr.querySelectorAll('td');
+        function txt(i){ return td[i] ? td[i].textContent.trim() : ''; }
+        var n   = txt(0);
+        var op  = txt(1);
+        var mac = txt(2);
+        var smv = txt(15);
+        var mp  = txt(5);
+        var ct  = txt(11);
+        var rt  = txt(12);
+        var t1=txt(6),t2=txt(7),t3=txt(8),t4=txt(9),t5=txt(10);
+        var pu=txt(3), pc=txt(4), bt=txt(13), al=txt(14), hc=txt(16);
+        var card = document.createElement('div');
+        card.className = 'oc-card';
+        card.innerHTML =
+          '<div class="oc-top"><span class="oc-no">'+n+'</span>'+
+          '<div class="oc-title">'+op+'</div>'+
+          '<div class="oc-smv"><b>'+smv+'</b><span>SMV min</span></div>'+
+          '<svg class="oc-caret" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>'+
+          '<div class="oc-chips">'+
+            (mac && mac!=='&ndash;' ? '<span class="oc-chip"><b>'+mac+'</b></span>' : '')+
+            (mp  && mp !=='&ndash;' ? '<span class="oc-chip">MP <b>'+mp+'</b></span>' : '')+
+            (ct  && ct !=='&ndash;' ? '<span class="oc-chip">Cycle <b>'+ct+' min</b></span>' : '')+
+            (rt  && rt !=='&ndash;' ? '<span class="oc-chip">Rating <b>'+rt+'</b></span>' : '')+
+          '</div>'+
+          '<div class="oc-body"><div class="ocg">'+
+            '<div class="oc-item"><span>Pcs/Unit</span><b>'+pu+'</b></div>'+
+            '<div class="oc-item"><span>Pcs/Cycle</span><b>'+pc+'</b></div>'+
+            '<div class="oc-item"><span>Hourly Cap.</span><b>'+hc+'</b></div>'+
+            '<div class="oc-item"><span>T1 (sec)</span><b>'+t1+'</b></div>'+
+            '<div class="oc-item"><span>T2 (sec)</span><b>'+t2+'</b></div>'+
+            '<div class="oc-item"><span>T3 (sec)</span><b>'+t3+'</b></div>'+
+            '<div class="oc-item"><span>T4 (sec)</span><b>'+t4+'</b></div>'+
+            '<div class="oc-item"><span>T5 (sec)</span><b>'+t5+'</b></div>'+
+            '<div class="oc-item"><span>Basic Time</span><b>'+bt+'</b></div>'+
+            '<div class="oc-item"><span>Allowance</span><b>'+al+'</b></div>'+
+          '</div></div>';
+        card.querySelector('.oc-top').addEventListener('click', function(){
+          card.classList.toggle('open');
+        });
+        box.appendChild(card);
+      });
+      // append after the scrollable table wrapper, inside the ops-wrap
+      var tw = wrap.querySelector('.tw');
+      if(tw && tw.nextSibling) wrap.insertBefore(box, tw.nextSibling);
+      else wrap.appendChild(box);
+    });
+  }
+  buildOpCards();
 
   /* ---------- refresh / auto-reload ---------- */
   var autoTimer = null;
