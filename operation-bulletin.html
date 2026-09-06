@@ -198,19 +198,23 @@
   .wf-role,.wf-mail{font-size:10px;color:var(--mut);word-break:break-word;}
   .wf-mail{color:#7c8ba0;font-size:9.5px;}
   .wf-st{margin-left:auto;align-self:center;}
-  .st-pill{font-size:9px;font-weight:800;border-radius:99px;padding:3px 9px;white-space:nowrap;display:inline-block;}
-  .wf-step.st-prep .st-pill{background:#e3ecff;color:#2f56b8;}
-  .wf-step.st-check .st-pill{background:#fff0db;color:#b45309;}
+  .st-pill{font-size:9px;font-weight:800;border-radius:99px;padding:3px 9px;white-space:nowrap;display:inline-block;
+           background:#eef1f6;color:#5b6b81;}
+  .wf-step.st-active .st-pill{background:#fff0db;color:#b45309;}
   .wf-step.st-done .st-pill{background:#d8f6ec;color:#0b7a5f;}
   .wf-step.st-done .wf-ic{background:linear-gradient(135deg,#12b886,#0b7a5f);}
-  .wf-step.st-approve .st-pill{background:#fff0db;color:#b45309;}
+  .wf-step.st-active .wf-ic{background:linear-gradient(135deg,#ffb02e,#e08b1d);}
   .wf-arrow{display:flex;align-items:center;color:#9fb0c0;font-size:20px;}
   .wf-step .act{grid-column:1/-1;}
-  .wf-btn{margin-top:8px;width:100%;display:inline-flex;justify-content:center;align-items:center;gap:7px;padding:9px;
+  .wf-btn{width:100%;display:inline-flex;justify-content:center;align-items:center;gap:7px;padding:9px;
           border:0;border-radius:10px;font-weight:800;font-size:12.5px;cursor:pointer;color:#fff;}
   .wf-btn.ck{background:linear-gradient(135deg,#5b8def,#3b62c7);}
   .wf-btn.ap{background:linear-gradient(135deg,#12b886,#0b7a5f);}
+  .wf-btn.ghost{background:#fff;color:#5b6b81;border:1px solid var(--line2);font-weight:700;}
   .wf-btn:disabled{background:#ccd6e2;cursor:not-allowed;}
+  .wf-hint{margin-top:7px;font-size:10px;color:#b45309;font-weight:700;}
+  .wf-step.st-active{background:#fffbef;border-color:#e8c37a;border-style:dashed;}
+  .wf-step.st-done{background:#f0fbf7;border-color:#bde7d8;}
   .wf-signed{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#0b7a5f;font-weight:700;}
   .wf-signed svg{color:#0b7a5f;}
 
@@ -283,7 +287,7 @@
       </div>
       <div class="sugg" id="sugg"></div>
     </div>
-    <div class="tb-note">Refreshed <b>06-Sep-2026</b> &middot; select <b>Approved</b> below to view only approved bulletins</div>
+    <div class="tb-note">Approval: <b>Prepared (Anoy)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; choose your name above to act &middot; Refreshed <b>06-Sep-2026</b></div>
   </div>
   <div class="chips" id="chips"><button class="chip on" data-g="all">All<i>138</i></button><button class="chip" data-g="ac/dc bulb">Ac/dc bulb<i>16</i></button><button class="chip" data-g="bracket tube">Bracket tube<i>6</i></button><button class="chip" data-g="db">Db<i>3</i></button><button class="chip" data-g="down panel">Down panel<i>10</i></button><button class="chip" data-g="exhaust fan">Exhaust fan<i>4</i></button><button class="chip" data-g="extension socket">Extension socket<i>1</i></button><button class="chip" data-g="flood light">Flood light<i>4</i></button><button class="chip" data-g="gss aurora">Gss aurora<i>1</i></button><button class="chip" data-g="gss cherry">Gss cherry<i>5</i></button><button class="chip" data-g="gss lumigold">Gss lumigold<i>10</i></button><button class="chip" data-g="gss onyx">Gss onyx<i>8</i></button><button class="chip" data-g="gss orchid">Gss orchid<i>3</i></button><button class="chip" data-g="gss saffron">Gss saffron<i>3</i></button><button class="chip" data-g="high watt led">High watt led<i>4</i></button><button class="chip" data-g="holder accessories">Holder accessories<i>12</i></button><button class="chip" data-g="mcb">Mcb<i>27</i></button><button class="chip" data-g="pc">Pc<i>5</i></button><button class="chip" data-g="regular led bulb">Regular led bulb<i>12</i></button><button class="chip" data-g="regular panel">Regular panel<i>4</i></button></div>
 </div>
@@ -370,14 +374,18 @@
     activeGroup=c.getAttribute('data-g'); syncChips(); apply();
   });
 
+  // default: prepared (Anoy) is auto-signed for every bulletin -> p starts 1
   function stOf(b){
     var code=b.getAttribute('data-code');
-    var st=STORE[code]||{p:0,c:0,a:0};
-    return {code:code, p:st.p||0, c:st.c||0, a:st.a||0};
+    var st=STORE[code]||{};
+    return {code:code,
+            p:(st.p===undefined?1:st.p),
+            c:(st.c===undefined?0:st.c),
+            a:(st.a===undefined?0:st.a)};
   }
-  function setState(code,field){
-    var st=STORE[code]||{p:0,c:0,a:0};
-    st[field]=1; STORE[code]=st;
+  function setState(code,field,val){
+    var st=STORE[code]||{};
+    st[field]=val===undefined?1:val; STORE[code]=st;
     try{ localStorage.setItem('alel_approvals_v1', JSON.stringify(STORE)); }catch(e){}
   }
 
@@ -452,50 +460,70 @@
       var s=stOf(b);
       var sec=(b.getAttribute('data-sec')||'').toUpperCase();
       var ck=({GSS:'Jhumour Rani',LED:'Kajal Kanti',HAP:'Abdullah Al-Mamun'})[sec]||'';
-      var steps=[b.querySelector('.wf-step[data-role=prepared]'),
-                 b.querySelector('.wf-step[data-role=checked]'),
-                 b.querySelector('.wf-step[data-role=approved]')];
-      // remove old action buttons
-      steps.forEach(function(st){ var ab=st.querySelector('.wf-btn'); if(ab) ab.remove(); });
-      // prepared
       var stP=b.querySelector('.wf-step[data-role=prepared]');
-      stP.classList.toggle('st-done', !!s.p);
-      stP.querySelector('[data-role=pill]').textContent = s.p?'Signed':'Auto';
-      var pillP=stP.querySelector('[data-role=pill]');
-      pillP.className='st-pill '+(s.p?'ok':'');
-      // checked
       var stC=b.querySelector('.wf-step[data-role=checked]');
-      stC.classList.remove('st-done','st-prep','st-check');
-      if(s.c){ stC.classList.add('st-done'); stC.querySelector('[data-role=pill]').textContent='Checked'; }
-      else if(s.p){ stC.classList.add('st-prep'); stC.querySelector('[data-role=pill]').textContent='Pending'; }
-      else { stC.classList.add('st-check'); stC.querySelector('[data-role=pill]').textContent='Waiting'; }
-      // approved
       var stA=b.querySelector('.wf-step[data-role=approved]');
-      stA.classList.remove('st-done','st-prep','st-check');
-      if(s.a){ stA.classList.add('st-done'); stA.querySelector('[data-role=pill]').textContent='Approved'; }
-      else if(s.c){ stA.classList.add('st-prep'); stA.querySelector('[data-role=pill]').textContent='Pending'; }
-      else { stA.classList.add('st-check'); stA.querySelector('[data-role=pill]').textContent='Waiting'; }
+      var hint=b.querySelector('.wf-hint');
+      // remove old buttons + hint
+      [stP,stC,stA].forEach(function(st){ if(!st)return; var h=st.querySelector('.wf-hint'); if(h)h.remove(); var ab=st.querySelector('.wf-btn'); if(ab)ab.remove(); });
+      // ---- prepared step (auto by Anoy) ----
+      stP.classList.toggle('st-done', !!s.p);
+      var pillP=stP.querySelector('[data-role=pill]');
+      pillP.textContent = s.p?'Signed by Anoy':'Pending';
+      pillP.className='st-pill';
+      // ---- checked step ----
+      var pillC=stC.querySelector('[data-role=pill]');
+      stC.classList.remove('st-done','st-active');
+      if(s.c){ stC.classList.add('st-done'); pillC.textContent='Checked'; }
+      else { stC.classList.add('st-active'); pillC.textContent=s.p?'Pending Check':'Awaiting Prep'; }
+      // ---- approved step ----
+      var pillA=stA.querySelector('[data-role=pill]');
+      stA.classList.remove('st-done','st-active');
+      if(s.a){ stA.classList.add('st-done'); pillA.textContent='Approved'; }
+      else { stA.classList.add('st-active'); pillA.textContent=s.c?'Pending Approve':'Awaiting Check'; }
+
       // header badge
       var ap=b.querySelector('.aprv');
       ap.className='aprv '+(s.a?'a-done':s.c?'a-pend':s.p?'a-prep':'');
-      ap.textContent=s.a?'Approved':s.c?'With Approver':'Pending';
+      ap.textContent=s.a?'Approved':s.c?'With Approver':s.p?'With Checker':'Preparing';
 
-      // action buttons - only for the right actor
-      if(me===ck && !s.c && s.p){ addAct(b, stC, 'ck', 'Check & Send to Approve'); }
-      if(me==='Md. Moshfequr Rahman' && s.c && !s.a){ addAct(b, stA, 'ap', 'Approve Final'); }
+      // ---- decide current actor's buttons ----
+      if(s.a){ // fully done
+        addBtn(b, stA, function(){ clearOne(b,'a'); }, 'Undo Approval', 'ghost');
+        return;
+      }
+      // prepared step done? if not and me is Anoy -> sign prepared
+      if(!s.p){
+        if(me===PREPARED){ addBtn(b, stP, function(){ setState(s.code,'p',1); refreshWF(); }, 'Sign as Prepared', 'ck'); }
+        return;
+      }
+      // checked pending -> checker acts
+      if(!s.c){
+        if(me===ck && ck){ addBtn(b, stC, function(){ setState(s.code,'c',1); refreshWF(); }, 'Check & Send to Approve', 'ck'); }
+        else { addHint(stC, nextWho(ck)); }
+        return;
+      }
+      // approved pending -> plant head acts
+      if(me===APPROVER){ addBtn(b, stA, function(){ setState(s.code,'a',1); refreshWF(); }, 'Approve Final', 'ap'); }
+      else { addHint(stA, nextWho(APPROVER)); }
     });
     apply();
   }
-  function addAct(b, step, kind, label){
+  var PREPARED='Anoy Kumar Das', APPROVER='Md. Moshfequr Rahman';
+  function nextWho(name){
+    var el=document.createElement('div'); el.className='wf-hint';
+    el.textContent='Waiting for '+name;
+    return el;
+  }
+  function addHint(step,el){ if(step) step.appendChild(el); }
+  function addBtn(b,step,cb,label,cls){
     var btn=document.createElement('button');
-    btn.className='wf-btn '+kind; btn.textContent=label;
-    btn.addEventListener('click', function(){
-      var s=stOf(b);
-      if(kind==='ck'){ setState(s.code,'c'); }
-      else { setState(s.code,'a'); }
-      refreshWF();
-    });
+    btn.className='wf-btn '+(cls||''); btn.textContent=label;
+    btn.addEventListener('click',function(){ cb(); });
     step.appendChild(btn);
+  }
+  function clearOne(b,field){
+    var s=stOf(b); setState(s.code,field,0); refreshWF();
   }
   refreshWF();
 
