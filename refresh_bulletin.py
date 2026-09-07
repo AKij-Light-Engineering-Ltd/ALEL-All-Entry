@@ -529,7 +529,7 @@ def build_html(results, media_bytes, out_path=None):
 
             f'<div class="b-head">'
             f'<div class="b-brand">'
-            f'<div class="b-eyebrow">ALEL INDUSTRIES LIMITED &middot; {ORG_LABEL}</div>'
+            f'<div class="b-eyebrow">Akij Light Engineering Ltd. (ALEL) &middot; {ORG_LABEL}</div>'
             f'<h2 class="b-title">{esc(name)}</h2>'
             f'<div class="b-sub">Operation Bulletin &middot; Work Study &amp; Capacity (SMV)</div>'
             f'</div>'
@@ -701,7 +701,7 @@ def build_home(results, media_bytes, dest=None):
   .hero{{max-width:760px;margin:0 auto;text-align:center;color:#fff;padding:54px 0 26px;}}
   .hero .logo{{width:62px;height:62px;border-radius:17px;margin:0 auto 14px;display:grid;place-items:center;font-size:30px;
                background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 14px 34px -8px rgba(14,159,122,.7);}}
-  .hero .eyebrow{{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9fd8c6;}}
+  .hero   .eyebrow{{font-size:11px;letter-spacing:.12em;color:#9fd8c6;}}
   .hero h1{{font-family:'Sora',sans-serif;font-size:clamp(24px,4.5vw,38px);margin:6px 0 8px;}}
   .hero p{{color:#c6d6ea;font-size:14px;line-height:1.6;}}
   .grid{{max-width:960px;margin:0 auto;display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}}
@@ -727,7 +727,7 @@ def build_home(results, media_bytes, dest=None):
 </style></head><body>
   <div class="hero">
     <div class="logo">&#9889;</div>
-    <div class="eyebrow">ALEL Industries Limited &middot; Operational Excellence</div>
+    <div class="eyebrow">Akij Light Engineering Ltd. (ALEL) &middot; Operational Excellence</div>
     <h1>Operation Bulletin</h1>
     <p>Choose a section to view its product operation bulletins, SMV studies and approvals.</p>
   </div>
@@ -866,7 +866,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .hv-hero{text-align:center;color:#fff;padding:8px 0 24px;}
   .hv-logo{width:64px;height:64px;border-radius:18px;margin:0 auto 12px;display:grid;place-items:center;font-size:32px;
            background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 14px 36px -8px rgba(14,159,122,.7);}
-  .hv-eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9fd8c6;}
+  .hv-eyebrow{font-size:11px;letter-spacing:.12em;color:#9fd8c6;}
   .hv-hero h1{font-family:'Sora',sans-serif;font-size:clamp(26px,4.6vw,40px);margin:6px 0 6px;}
   .hv-hero p{color:#c6d6ea;font-size:13.5px;max-width:520px;margin:0 auto;line-height:1.6;}
   .hv-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
@@ -891,7 +891,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .bulletin.hidden{display:none;}
   .b-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;color:#fff;
           padding:16px 20px;background:linear-gradient(120deg,#0b1c38,#12314f 55%,#0e7a63);position:relative;overflow:hidden;}
-  .b-eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9fd8c6;}
+  .b-eyebrow{font-size:10px;letter-spacing:.1em;color:#9fd8c6;}
   .b-title{font-family:'Sora',sans-serif;font-size:20px;margin:2px 0 2px;line-height:1.2;word-break:break-word;}
   .b-sub{font-size:11px;color:#c6d6ea;}
   .b-badges{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;}
@@ -1205,7 +1205,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="hv-inner">
       <div class="hv-hero">
         <div class="hv-logo">&#9889;</div>
-        <div class="hv-eyebrow">ALEL Industries Limited &middot; Operational Excellence</div>
+        <div class="hv-eyebrow">Akij Light Engineering Ltd. (ALEL) &middot; Operational Excellence</div>
         <h1>Operation Bulletin</h1>
         <p>Select a section to open its product bulletins, SMV studies &amp; approvals.</p>
       </div>
@@ -1255,7 +1255,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <p class="adm-note">Offline demo: users &amp; requests are saved in this browser only. For a real shared system (email login, cross-device requests) a Google Apps Script / backend is needed.</p>
   </div>
 </div>
-<div class="foot">ALEL Industries Limited &middot; Operational Excellence &middot; Operation Bulletin</div>
+<div class="foot">Akij Light Engineering Ltd. (ALEL) &middot; Operational Excellence &middot; Operation Bulletin</div>
 <script id="data-cat" type="application/json">%CATALOG%</script>
 <script id="data-people" type="application/json">%PEOPLE%</script>
 <script id="data-users" type="application/json">%USERS%</script>
