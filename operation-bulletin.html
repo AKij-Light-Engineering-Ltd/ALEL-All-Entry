@@ -386,7 +386,7 @@
       </div>
       <div class="sugg" id="sugg"></div>
     </div>
-    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>07-Sep-2026</b> at <b id="refTime">2026-09-07 16:17:21</b> &middot; <span id="liveClock"></span></div>
+    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>07-Sep-2026</b> at <b id="refTime">2026-09-07 16:27:18</b> &middot; <span id="liveClock"></span></div>
   </div>
   <div class="chips" id="chips"><button class="chip on" data-sec="all">All Bulletins<i>139</i></button><button class="chip" data-sec="gss">GSS Section<i>75</i></button><button class="chip" data-sec="led">LED Section<i>63</i></button><button class="chip" data-sec="hap">HAP Section<i>1</i></button></div>
 </div>
@@ -503,6 +503,37 @@
 <script id="data-users" type="application/json">[{"id": "md.marufhossain@akijlightengineering.com", "name": "Md. Maruf Hossain", "role": "admin", "section": "", "hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"}, {"id": "anoy@akijlightengineering.com", "name": "Anoy Kumar Das", "role": "prepared", "section": "", "hash": "65e6396b2a044e88c28fcd25ccff41545033dfa8041d72ee1fa2bb8635343ed9"}, {"id": "jhumour@akijlightengineering.com", "name": "Jhumour Rani", "role": "checker", "section": "GSS", "hash": "0a7a42be4f4035e2b46ac4f7ef9eaf74f7b1d63f68541196677c225c495d6e68"}, {"id": "kajal04@akijlightengineering.com", "name": "Kajal Kanti", "role": "checker", "section": "LED", "hash": "9cddec03c3a30f5dcd28153bd8a40d8e9e682b8b5daaedb7a61a8c6646bc6202"}, {"id": "almamun@akijlightengineering.com", "name": "Abdullah Al-Mamun", "role": "checker", "section": "HAP", "hash": "9fefd69e5caddd83015a0acf48b7f6f6fe567e2008f4b6228b2df2b43deb1028"}, {"id": "head.plant@akijlightengineering.com", "name": "Md. Moshfequr Rahman", "role": "approver", "section": "", "hash": "7fb69d64d085e299af365f6783a4f0e3c77b6fd4bf14febdb3af8ba0416f777d"}]</script>
 <script>
 (function(){
+  /* ================= Shared backend (Google Apps Script) =================
+     When  is filled, users/requests/approvals sync across
+     every device through the Apps Script web app. If empty, the page runs
+     fully offline using this browser's localStorage only. */
+  var BACKEND_URL = "";
+  var USING_BACKEND = BACKEND_URL && BACKEND_URL.indexOf("https://") === 0;
+
+  function backendCall(payload, cb){
+    if(!USING_BACKEND){ if(cb) cb(null); return; }
+    try{
+      fetch(BACKEND_URL, {method:'POST', body: JSON.stringify(payload)})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(cb) cb(j); })
+        .catch(function(){ if(cb) cb(null); });
+    }catch(e){ if(cb) cb(null); }
+  }
+  // pulls latest users/requests/approvals from the server into memory
+  function pullServer(quiet, done){
+    if(!USING_BACKEND){ if(done) done(); return; }
+    backendCall({action:'list'}, function(j){
+      serverLoaded = true;
+      if(j && j.ok){
+        try{ SERVER_USERS = j.users || []; SERVER_REQS = j.requests || []; SERVER_APPR = j.approvals || []; }catch(e){}
+        try{ localStorage.setItem('alel_server_users', JSON.stringify(SERVER_USERS)); }catch(e){}
+        if(done) done();
+      } else { if(done) done(); }
+    });
+  }
+  var SERVER_USERS = []; var SERVER_REQS = []; var SERVER_APPR = [];
+  try{ SERVER_USERS = JSON.parse(localStorage.getItem('alel_server_users')||'[]'); }catch(e){}
+
   var CATALOG = JSON.parse(document.getElementById('data-cat').textContent || '[]');
   var PEOPLE = JSON.parse(document.getElementById('data-people').textContent || '[]');
   var USERS = JSON.parse(document.getElementById('data-users').textContent || '[]');
@@ -551,8 +582,24 @@
   // extra users/requests persisted locally (offline only; a real server would share them)
   var EXUSERS = {}; try{ EXUSERS=JSON.parse(localStorage.getItem('alel_extra_users')||'{}'); }catch(e){}
   var REQS = []; try{ REQS=JSON.parse(localStorage.getItem('alel_access_requests')||'[]'); }catch(e){}
-  function allUsers(){ return USERS.concat(Object.keys(EXUSERS).map(function(k){ return {id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section,hash:EXUSERS[k].hash}; })); }
-  function findUser(em){ var ex=EXUSERS[em]; if(ex) return {id:em,name:ex.name,role:ex.role,section:ex.section,hash:ex.hash}; return USERS.filter(function(x){return x.id===em;})[0]||null; }
+  function allUsers(){
+    var local = USERS.concat(Object.keys(EXUSERS).map(function(k){ return {id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section,hash:EXUSERS[k].hash}; }));
+    if(USING_BACKEND && SERVER_USERS && SERVER_USERS.length){
+      var map = {}; SERVER_USERS.forEach(function(u){ if(u.id) map[u.id.toLowerCase()] = u; });
+      local.forEach(function(u){ if(!map[u.id.toLowerCase()]) map[u.id.toLowerCase()] = u; });
+      return Object.keys(map).map(function(k){ return map[k]; });
+    }
+    return local;
+  }
+  function findUser(em){
+    em = em.toLowerCase();
+    if(USING_BACKEND && SERVER_USERS && SERVER_USERS.length){
+      var s = SERVER_USERS.filter(function(x){ return x.id && x.id.toLowerCase()===em; })[0];
+      if(s) return s;
+    }
+    var ex=EXUSERS[em]; if(ex) return {id:em,name:ex.name,role:ex.role,section:ex.section,hash:ex.hash};
+    return USERS.filter(function(x){return x.id.toLowerCase()===em;})[0]||null;
+  }
 
   function showLogin(){ overlay.classList.add('show'); overlay.style.display='flex'; document.body.style.overflow='hidden'; }
   function hideLogin(){ overlay.classList.remove('show'); overlay.style.display='none'; document.body.style.overflow=''; }
@@ -583,12 +630,18 @@
   document.getElementById('backLogin1').addEventListener('click', function(){ showPanel('login'); });
   document.getElementById('backLogin2').addEventListener('click', function(){ showPanel('login'); });
   // ---- login ----
-  loginBtn.addEventListener('click', doLogin);
+  loginBtn.addEventListener('click', function(){ doLogin(); });
   [loginId, loginPass].forEach(function(i){ i.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); }); });
+  var serverLoaded = !USING_BACKEND;
   function doLogin(){
     var email=(loginId.value||'').trim().toLowerCase();
     var pw=loginPass.value||'';
     if(!email||!pw){ loginErr.textContent='Enter email and password'; return; }
+    if(USING_BACKEND && !serverLoaded){
+      loginErr.textContent='Connecting to server…';
+      pullServer(false, function(){ serverLoaded=true; doLogin(); });
+      return;
+    }
     sha256Hex(pw).then(function(h){
       var u=findUser(email);
       if(!u){ loginErr.textContent='No account with this email. Use “Request access”.'; return; }
@@ -610,8 +663,14 @@
     if(!u){ forgotErr.textContent='No account with this email.'; return; }
     forgotErr.textContent='';
     var req={type:'reset', email:em, when:new Date().toLocaleString()};
-    REQS.push(req); try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
-    showOk('Reset request sent to the Administrator.\n(Offline demo: open this page as Admin → “Admin panel” to reset the password.)');
+    if(USING_BACKEND){
+      backendCall({action:'request', type:'reset', email:em, name:'', section:'', when:req.when}, function(j){
+        showOk(j && j.ok ? 'Reset request sent to the Administrator (server).' : 'Server unreachable. Try again later.');
+      });
+    } else {
+      REQS.push(req); try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
+      showOk('Reset request sent to the Administrator.\n(Offline demo: open this page as Admin → “Admin panel” to reset the password.)');
+    }
     forgotEmail.value='';
   });
   // ---- request access ----
@@ -620,9 +679,16 @@
     if(!nm||!em){ reqErr.textContent='Enter your name and email'; return; }
     if(allUsers().filter(function(x){ return x.id===em; }).length){ reqErr.textContent='This email already has an account.'; return; }
     reqErr.textContent='';
-    REQS.push({type:'access', name:nm, email:em, section:sec, when:new Date().toLocaleString()});
-    try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
-    showOk('Access request sent to the Administrator.\n(Offline demo: the Admin can approve it in the “Admin panel”.)');
+    var when=new Date().toLocaleString();
+    if(USING_BACKEND){
+      backendCall({action:'request', type:'access', name:nm, email:em, section:sec, when:when}, function(j){
+        showOk(j && j.ok ? 'Access request sent to the Administrator (server).' : 'Server unreachable. Try again later.');
+      });
+    } else {
+      REQS.push({type:'access', name:nm, email:em, section:sec, when:when});
+      try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
+      showOk('Access request sent to the Administrator.\n(Offline demo: the Admin can approve it in the “Admin panel”.)');
+    }
     reqName.value=''; reqEmail.value=''; reqSection.value='';
   });
   // ---- admin panel (visible only to admin) ----
@@ -637,7 +703,11 @@
   function reloadStore(){
     try{ EXUSERS=JSON.parse(localStorage.getItem('alel_extra_users')||'{}'); }catch(e){ EXUSERS={}; }
     try{ REQS=JSON.parse(localStorage.getItem('alel_access_requests')||'[]'); }catch(e){ REQS=[]; }
-    // merge extra users into a fresh list each time
+    if(USING_BACKEND){
+      // server list is authoritative; fall back to local until fetched
+      if(SERVER_REQS && SERVER_REQS.length) REQS = SERVER_REQS.slice();
+      if(SERVER_USERS && SERVER_USERS.length){ EXUSERS = {}; SERVER_USERS.forEach(function(u){ EXUSERS[u.id]={name:u.name,role:u.role,section:u.section,hash:u.hash}; }); }
+    }
   }
   // keep admin badge/requests live (same browser / other tabs)
   window.addEventListener('storage', function(ev){
@@ -673,14 +743,23 @@
     body.querySelectorAll('[data-act]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var li=btn.closest('li'); var idx=li?li.getAttribute('data-i'):null; var em=btn.getAttribute('data-em');
-        if(btn.getAttribute('data-act')==='grant'||btn.getAttribute('data-act')==='grantpass'){
+        var act=btn.getAttribute('data-act');
+        if(act==='grant'||act==='grantpass'){
           var r=REQS[idx];
           if(r.type==='access'){ grantAccess(r.email, r.name, r.section); }
           else { resetUser(r.email); }
-          r.done=true; saveReqs(); reloadStore(); openAdmin();
-        } else if(btn.getAttribute('data-act')==='deny'){
-          REQS.splice(idx,1); saveReqs(); reloadStore(); openAdmin();
-        } else if(btn.getAttribute('data-act')==='resetpass'){
+          if(USING_BACKEND){ pullServer(false, function(){ reloadStore(); renderAdminPanel(); openAdmin(); }); }
+          else { r.done=true; saveReqs(); reloadStore(); openAdmin(); }
+        } else if(act==='deny'){
+          var r2=REQS[idx];
+          if(USING_BACKEND){
+            backendCall({action:'removeRequest', email:r2?r2.email:''}, function(){
+              pullServer(false, function(){ reloadStore(); renderAdminPanel(); openAdmin(); });
+            });
+          } else {
+            REQS.splice(idx,1); saveReqs(); reloadStore(); openAdmin();
+          }
+        } else if(act==='resetpass'){
           resetUser(em); reloadStore(); openAdmin();
         }
       });
@@ -691,19 +770,34 @@
     var role = (sec==='GSS'||sec==='LED'||sec==='HAP') ? 'checker' : 'prepared';
     var pass=makePass();
     sha256Hex(pass).then(function(h){
-      EXUSERS[em]={name:nm, role:role, section:sec||'', hash:h};
-      try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
-      alert('Account created for '+em+'.\nRole: '+role+(sec?' ('+sec+')':'')+'\nLogin password: '+pass+'\n(Share this with the user.)');
+      var rec={name:nm, role:role, section:sec||'', hash:h};
+      if(USING_BACKEND){
+        backendCall({action:'upsert', email:em, name:nm, role:role, section:sec||'', hash:h}, function(j){
+          if(j && j.ok){ alert('Account created for '+em+' on server.\nRole: '+role+(sec?' ('+sec+')':'')+'\nLogin password: '+pass); pullServer(false, renderAdminPanel); }
+          else { alert('Server unreachable. Please try again.'); }
+        });
+      } else {
+        EXUSERS[em]=rec;
+        try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
+        alert('Account created for '+em+'.\nRole: '+role+(sec?' ('+sec+')':'')+'\nLogin password: '+pass+'\n(Share this with the user.)');
+      }
     });
   }
   function resetUser(em){
     var pass=makePass();
     sha256Hex(pass).then(function(h){
-      var u=USERS.filter(function(x){return x.id===em;})[0];
-      if(u){ EXUSERS[em]={name:u.name, role:u.role, section:u.section, hash:h}; }
-      else if(EXUSERS[em]){ EXUSERS[em].hash=h; }
-      try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
-      alert('Password reset for '+em+'.\nNew temporary password: '+pass);
+      var u=findUser(em);
+      if(USING_BACKEND){
+        backendCall({action:'resetpass', email:em, hash:h}, function(j){
+          if(j && j.ok){ alert('Password reset for '+em+' on server.\nNew temporary password: '+pass); pullServer(false, renderAdminPanel); }
+          else { alert('Server unreachable. Please try again.'); }
+        });
+      } else {
+        if(u){ EXUSERS[em]={name:u.name, role:u.role, section:u.section||'', hash:h}; }
+        else if(EXUSERS[em]){ EXUSERS[em].hash=h; }
+        try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
+        alert('Password reset for '+em+'.\nNew temporary password: '+pass);
+      }
     });
   }
   function makePass(){ return 'Al@'+(Math.floor(1000+Math.random()*9000)); }
@@ -738,10 +832,29 @@
     if(listWrap) listWrap.style.display='block';
     document.body.classList.remove('onhome');
   }
-  if(!SESSION){ showLogin(); showPanel('login'); showHome(); }
-  else { applySession(); }
-  if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); setView('all'); showList(); }
-  else { showHome(); }
+  function mergeServerApprovals(){
+    if(!USING_BACKEND || !SERVER_APPR || !SERVER_APPR.length) return;
+    SERVER_APPR.forEach(function(x){
+      if(x && x.code){ STORE[x.code]={p:x.p||0, c:x.c||0, a:x.a||0}; }
+    });
+    try{ localStorage.setItem('alel_approvals_v1', JSON.stringify(STORE)); }catch(e){}
+  }
+  function bootApply(){
+    if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); setView('all'); showList(); }
+    else { showHome(); }
+    refreshWF();
+    apply();
+  }
+  if(USING_BACKEND){
+    pullServer(true, function(){
+      mergeServerApprovals();
+      if(!SESSION){ showLogin(); showPanel('login'); showHome(); }
+      else { applySession(); bootApply(); }
+    });
+  } else {
+    if(!SESSION){ showLogin(); showPanel('login'); showHome(); }
+    else { applySession(); bootApply(); }
+  }
 
   /* ---------- role helpers ---------- */
   function canSee(b){
@@ -818,6 +931,9 @@
     var st=STORE[code]||{};
     st[field]=val===undefined?1:val; STORE[code]=st;
     try{ localStorage.setItem('alel_approvals_v1', JSON.stringify(STORE)); }catch(e){}
+    if(USING_BACKEND){
+      backendCall({action:'approve', code:code, p:st.p||0, c:st.c||0, a:st.a||0});
+    }
   }
 
   function apply(){
