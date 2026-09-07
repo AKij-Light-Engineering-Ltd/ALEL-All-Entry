@@ -27,7 +27,7 @@ OUT_HTML = os.path.join(HERE, "ALEL_Operation_Bulletin_Searchable.html")
 MAX_SIDE = 520  # px for embedded product images
 
 # ---------------- Approval workflow configuration ----------------
-PREPARED_BY = {"name": "Anoy Kumar Das", "role": "Industrial Engineering"}
+PREPARED_BY = {"name": "Anoy Kumar Das", "role": "Operational Excellence / I.E."}
 APPROVED_BY = {"name": "Md. Moshfequr Rahman", "role": "Plant Head", "email": "head.plant@akijlightengineering.com"}
 CHECKER_BY_SECTION = {
     "GSS": {"name": "Jhumour Rani", "email": "jhumour@akijlightengineering.com"},
@@ -36,18 +36,21 @@ CHECKER_BY_SECTION = {
 }
 STORE_KEY = "alel_approvals_v1"
 
-# ---------------- Login users ----------------
+# ---------------- Login users (login by EMAIL) ----------------
 # role: admin | prepared | checker | approver
 # section (for checker): GSS | LED | HAP
 USERS = [
-    {"id": "admin",     "name": "Administrator",        "role": "admin",     "section": "", "pass": "admin123"},
-    {"id": "anoy",      "name": "Anoy Kumar Das",       "role": "prepared",  "section": "", "pass": "anoy123"},
-    {"id": "jhgss",     "name": "Jhumour Rani",         "role": "checker",   "section": "GSS", "pass": "gss123"},
-    {"id": "kkled",     "name": "Kajal Kanti",          "role": "checker",   "section": "LED", "pass": "led123"},
-    {"id": "amhap",     "name": "Abdullah Al-Mamun",    "role": "checker",   "section": "HAP", "pass": "hap123"},
-    {"id": "planthead", "name": "Md. Moshfequr Rahman", "role": "approver",  "section": "", "pass": "head123"},
+    {"id": "md.marufhossain@akijlightengineering.com", "name": "Md. Maruf Hossain",        "role": "admin",     "section": "", "pass": "admin123"},
+    {"id": "anoy@akijlightengineering.com",             "name": "Anoy Kumar Das",          "role": "prepared",  "section": "", "pass": "anoy123"},
+    {"id": "jhumour@akijlightengineering.com",          "name": "Jhumour Rani",            "role": "checker",   "section": "GSS", "pass": "gss123"},
+    {"id": "kajal04@akijlightengineering.com",          "name": "Kajal Kanti",             "role": "checker",   "section": "LED", "pass": "led123"},
+    {"id": "almamun@akijlightengineering.com",          "name": "Abdullah Al-Mamun",       "role": "checker",   "section": "HAP", "pass": "hap123"},
+    {"id": "head.plant@akijlightengineering.com",       "name": "Md. Moshfequr Rahman",    "role": "approver",  "section": "", "pass": "head123"},
 ]
 USER_SESSION_KEY = "alel_login_v1"
+# Prepared signers (displayed list)
+PREPARED_NAMES = ["Md. Maruf Hossain", "Anoy Kumar Das"]
+ORG_LABEL = "Operational Excellence"   # replaces "Industrial Engineering"
 
 
 def login_user_db():
@@ -57,16 +60,6 @@ def login_user_db():
         db.append({"id": u["id"], "name": u["name"], "role": u["role"],
                    "section": u["section"], "hash": h})
     return db
-
-
-def creds_html():
-    rows = "".join(
-        f'<tr><td>{esc(u["id"])}</td><td>{esc(u["role"])}'
-        + (f' ({esc(u["section"])})' if u.get("section") else "")
-        + f'</td><td><code>{esc(u["pass"])}</code></td></tr>'
-        for u in USERS)
-    return ('<table><tr><th>ID</th><th>Role</th><th>Password</th></tr>'
-            + rows + "</table>")
 
 
 def log(msg):
@@ -519,7 +512,7 @@ def build_html(results, media_bytes, out_path=None):
 
             f'<div class="b-head">'
             f'<div class="b-brand">'
-            f'<div class="b-eyebrow">ALEL INDUSTRIES LIMITED &middot; Industrial Engineering</div>'
+            f'<div class="b-eyebrow">ALEL INDUSTRIES LIMITED &middot; {ORG_LABEL}</div>'
             f'<h2 class="b-title">{esc(name)}</h2>'
             f'<div class="b-sub">Operation Bulletin &middot; Work Study &amp; Capacity (SMV)</div>'
             f'</div>'
@@ -561,7 +554,7 @@ def build_html(results, media_bytes, out_path=None):
             f'<div class="wf-step wf-prep" data-role="prepared">'
             f'<div class="wf-ic">{IC["pp"]}</div>'
             f'<div class="wf-tx"><div class="wf-lab">Prepared By</div>'
-            f'<div class="wf-name">{esc(PREPARED_BY["name"])}</div>'
+            f'<div class="wf-name">{" &amp; ".join(esc(n) for n in PREPARED_NAMES)}</div>'
             f'<div class="wf-role">{esc(PREPARED_BY["role"])}</div></div>'
             f'<div class="wf-st"><span class="st-pill" data-role="pill">Auto</span></div>'
             f'</div>'
@@ -587,14 +580,18 @@ def build_html(results, media_bytes, out_path=None):
             f'</section>')
 
     # ---------- chips ----------
-    groups = {}
+    sec_counts = {"GSS": 0, "LED": 0, "HAP": 0, "OTHER": 0}
     for r in results:
-        g = (r["header"].get("group") or "").strip().lower()
-        if g:
-            groups[g] = groups.get(g, 0) + 1
-    chip_html = '<button class="chip on" data-g="all">All<i>%TOTAL%</i></button>' + "".join(
-        f'<button class="chip" data-g="{esc(g)}">{g[0].upper() + g[1:]}<i>{groups[g]}</i></button>'
-        for g in sorted(groups))
+        s = (r.get("section") or "").strip().upper()
+        key = s if s in sec_counts else "OTHER"
+        sec_counts[key] += 1
+    chip_html = ""
+    order = ["GSS", "LED", "HAP", "OTHER"]
+    chip_html = '<button class="chip on" data-sec="all">All Bulletins<i>%TOTAL%</i></button>'
+    for k in order:
+        if sec_counts.get(k):
+            lbl = {"OTHER": "Other"}.get(k, k)
+            chip_html += f'<button class="chip" data-sec="{esc(k.lower())}">{esc(lbl)} Section<i>{sec_counts[k]}</i></button>'
 
     people = []
     people.append({"k": PREPARED_BY["name"], "l": PREPARED_BY["name"] + " (Prepared)"})
@@ -616,7 +613,6 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%CATALOG%", cat_json) \
                             .replace("%PEOPLE%", people_json) \
                             .replace("%USERS%", users_json) \
-                            .replace("%CREDS%", creds_html()) \
                             .replace("%ICON_SEARCH%", IC["search"]) \
                             .replace("%ICON_REFRESH%", IC["refresh"])
     dest = out_path or OUT_HTML
@@ -683,7 +679,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .tb-in{max-width:1280px;margin:0 auto;padding:10px 16px 0;display:grid;gap:8px;grid-template-columns:1fr;}
   .tb-row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .brand-h{display:flex;align-items:center;gap:10px;color:#fff;min-width:0;}
-  .logo{width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
+  .logo-link{display:inline-flex;text-decoration:none;border-radius:12px;}
+  .logo-link:hover .logo{transform:scale(1.05);box-shadow:0 10px 24px -6px rgba(14,159,122,.8);}
+  .logo{width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;cursor:pointer;transition:.2s;
         background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 8px 20px -6px rgba(14,159,122,.55);}
   .brand-h h1{font-family:'Sora',sans-serif;font-size:15px;line-height:1.1;min-width:0;}
   .brand-h h1 small{display:block;font-weight:500;font-size:9.5px;letter-spacing:.14em;color:#9fb3d0;text-transform:uppercase;}
@@ -893,7 +891,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               font-size:28px;background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 12px 26px -8px rgba(14,159,122,.6);}
   .login-card h2{font-family:'Sora',sans-serif;text-align:center;font-size:20px;color:var(--ink);}
   .login-card > p{text-align:center;color:var(--mut);font-size:12.5px;margin:4px 0 4px;}
-  .login-hint{text-align:center;font-size:11px;color:#b45309;font-weight:700;margin:2px 0 14px;}
   .login-f{display:grid;gap:6px;margin-top:6px;}
   .login-f label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;}
   .login-f input{padding:11px 12px;border:1px solid var(--line2);border-radius:11px;font-size:14px;outline:none;font-family:inherit;}
@@ -903,11 +900,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         color:#fff;font-weight:800;font-size:14px;cursor:pointer;margin-top:4px;}
   .login-f button#loginBtn:hover{filter:brightness(1.06);}
   .hint-btn{background:none;border:none;color:#7c8ba0;font-size:11px;cursor:pointer;text-decoration:underline dotted;margin-top:6px;}
-  .creds{display:none;margin-top:12px;background:#f4f7fb;border:1px solid var(--line);border-radius:12px;padding:10px;max-height:220px;overflow:auto;}
-  .creds table{width:100%;border-collapse:collapse;font-size:11.5px;}
-  .creds th{text-align:left;color:var(--mut);padding:3px 6px;border-bottom:1px solid var(--line2);font-size:10px;text-transform:uppercase;}
-  .creds td{padding:4px 6px;border-bottom:1px solid var(--soft);}
-  .creds code{background:#e8edf5;border-radius:6px;padding:1px 6px;font-size:10.5px;}
+  .login-links{display:flex;justify-content:space-between;gap:8px;margin-top:2px;}
+  .login-links .hint-btn{background:none;border:none;color:#3b62c7;font-size:11.5px;font-weight:600;cursor:pointer;padding:4px 0;}
+  .login-links .hint-btn:hover{text-decoration:underline;}
+  .panel-txt{font-size:12px;color:var(--mut);line-height:1.5;margin-bottom:6px;}
+  .ok-msg{display:none;margin-top:12px;background:#e7f8f2;border:1px solid #bde7d8;color:#0b7a5f;
+          border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.5;white-space:pre-line;text-align:center;}
+  .ok-msg.show{display:block;}
+  .adm-wrap{position:fixed;inset:0;z-index:600;display:flex;align-items:flex-start;justify-content:center;
+            padding:40px 14px;background:rgba(5,10,20,.7);backdrop-filter:blur(4px);overflow:auto;}
+  .adm-box{width:100%;max-width:680px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);}
+  .adm-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;
+            background:linear-gradient(135deg,#0f2b46,#163a5c);color:#fff;}
+  .adm-head h3{margin:0;}
+  .adm-head button{background:none;border:0;color:#fff;font-size:24px;cursor:pointer;line-height:1;}
+  .adm-body{padding:16px 18px;max-height:70vh;overflow:auto;}
+  .adm-body h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin:16px 0 8px;border-bottom:2px solid var(--navy);padding-bottom:4px;}
+  .adm-body h3:first-child{margin-top:0;}
+  .adm-body .empty{color:var(--mut);font-size:12.5px;padding:4px 0;}
+  .req-list,.user-list{list-style:none;}
+  .req-list li,.user-list li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;
+        border:1px solid var(--line);border-radius:11px;margin-bottom:6px;background:#fff;}
+  .req-list b,.user-list b{min-width:150px;}
+  .req-list .rq{font-size:10.5px;font-weight:700;color:#fff;background:var(--blue);border-radius:99px;padding:2px 9px;}
+  .req-list .rw,.user-list code{font-size:10.5px;color:#8fa0b8;}
+  .user-list code{margin-left:auto;}
+  .rq-act{margin-left:auto;display:flex;gap:6px;}
+  .mini{font-size:11px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid var(--line2);background:#fff;cursor:pointer;}
+  .mini.ok{background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;border:0;}
+  .mini.no{color:#b3392c;border-color:#e7b3ac;}
+  .adm-note{font-size:10.5px;color:#8fa0bb;margin:12px 0 0;padding:0 18px 14px;}
+  .tbtn.admin{background:rgba(255,255,255,.12);}
+  .tbtn.admin.has{border-color:#ffd166;color:#ffd166;animation:glow 1.6s infinite;}
+  @keyframes glow{50%{box-shadow:0 0 0 4px rgba(255,209,102,.18);}}
 
   @media (min-width:821px){
     .opc:hover{transform:translateX(2px);}
@@ -955,8 +980,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="topbar">
   <div class="tb-in">
     <div class="tb-row1">
-      <div class="brand-h"><div class="logo">&#9889;</div>
-        <h1>ALEL Operation Bulletin<small>ENOVAR &middot; Searchable &middot; Approval</small></h1></div>
+      <div class="brand-h">
+        <a class="logo-link" href="https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/" title="Back to ALEL Home">
+          <div class="logo">&#127968;</div>
+        </a>
+        <h1>ALEL Operation Bulletin<small>Live SMV &amp; Digital Approval</small></h1>
+      </div>
       <div class="who" id="whoBox">
         <span class="who-user" id="whoUser"></span>
         <button class="logout" id="logoutBtn" type="button">Logout</button>
@@ -965,6 +994,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="tbtn" id="autoBtn" type="button"><span class="auto-dot"></span><span class="lb" id="autoLab">Auto 1m</span></button>
         <button class="tbtn refresh" id="refreshBtn" type="button">%ICON_REFRESH%<span class="lb">Refresh</span></button>
       </div>
+      <button class="tbtn admin" id="adminBtn" type="button" style="display:none">&#128110; Admin<i></i></button>
     </div>
     <div class="tb-row2">
       <div class="searchbox">%ICON_SEARCH%
@@ -983,18 +1013,41 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="login-card">
     <div class="login-logo">&#9889;</div>
     <h2>ALEL Operation Bulletin</h2>
-    <p>Sign in to review &amp; approve bulletins</p>
-    <div class="login-hint">Use your assigned ID &amp; password</div>
-    <div class="login-f">
-      <label>User ID</label>
-      <input id="loginId" type="text" autocomplete="username" placeholder="e.g. jhgss, planthead, admin">
+    <p id="loginSub">Sign in with your office email</p>
+    <div class="login-f" id="loginForm">
+      <label>Email</label>
+      <input id="loginId" type="email" autocomplete="username" placeholder="yourname@akijlightengineering.com">
       <label>Password</label>
       <input id="loginPass" type="password" autocomplete="current-password" placeholder="Password">
       <div class="login-err" id="loginErr"></div>
       <button id="loginBtn" type="button">Sign In</button>
-      <button class="hint-btn" id="showCreds" type="button">Show demo accounts</button>
+      <div class="login-links">
+        <button class="hint-btn" id="forgotBtn" type="button">Forgot password?</button>
+        <button class="hint-btn" id="requestBtn" type="button">New user? Request access</button>
+      </div>
     </div>
-    <div class="creds" id="credsList">%CREDS%</div>
+    <div class="login-f" id="forgotPanel" style="display:none">
+      <p class="panel-txt">Enter your office email and we will send a reset link to the administrator. (Offline demo: the request appears in the Admin panel.)</p>
+      <input id="forgotEmail" type="email" placeholder="yourname@akijlightengineering.com">
+      <div class="login-err" id="forgotErr"></div>
+      <button id="forgotSend" type="button">Send Reset Request</button>
+      <button class="hint-btn" id="backLogin1" type="button">&larr; Back to login</button>
+    </div>
+    <div class="login-f" id="requestPanel" style="display:none">
+      <p class="panel-txt">Fill in your details. The Admin will approve your account.</p>
+      <input id="reqName" type="text" placeholder="Full name">
+      <input id="reqEmail" type="email" placeholder="Office email">
+      <select id="reqSection">
+        <option value="">Select your section</option>
+        <option value="GSS">GSS</option>
+        <option value="LED">LED</option>
+        <option value="HAP">HAP</option>
+      </select>
+      <div class="login-err" id="reqErr"></div>
+      <button id="reqSend" type="button">Send Access Request</button>
+      <button class="hint-btn" id="backLogin2" type="button">&larr; Back to login</button>
+    </div>
+    <div class="ok-msg" id="loginOk"></div>
   </div>
 </div>
 <main>
@@ -1012,7 +1065,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <button class="to-top" id="toTop" type="button" aria-label="Back to top">
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
 </button>
-<div class="foot">ALEL Industries Limited &middot; Industrial Engineering &middot; Operation Bulletin v3.0</div>
+<!-- admin dialog -->
+<div class="adm-wrap" id="adminDlg" style="display:none">
+  <div class="adm-box">
+    <div class="adm-head"><h3>&#128110; Admin Panel</h3><button id="admClose" type="button">&times;</button></div>
+    <div class="adm-body" id="adminBody"></div>
+    <p class="adm-note">Offline demo: users &amp; requests are saved in this browser only. For a real shared system (email login, cross-device requests) a Google Apps Script / backend is needed.</p>
+  </div>
+</div>
+<div class="foot">ALEL Industries Limited &middot; Operational Excellence &middot; Operation Bulletin</div>
 <script id="data-cat" type="application/json">%CATALOG%</script>
 <script id="data-people" type="application/json">%PEOPLE%</script>
 <script id="data-users" type="application/json">%USERS%</script>
@@ -1033,7 +1094,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       chipsEl=document.getElementById('chips'), msg=document.getElementById('msg'),
       whoBox=document.getElementById('whoBox'), whoUser=document.getElementById('whoUser'),
       logoutBtn=document.getElementById('logoutBtn');
-  var activeGroup='all', activeView='all';
+  var activeSec='all', activeView='all';
   var codeOf = {}; bullets.forEach(function(b){ codeOf[b.getAttribute('data-code')]=b; });
 
   /* ---------- login ---------- */
@@ -1053,43 +1114,164 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   }
   var overlay=document.getElementById('loginOverlay'),
       loginId=document.getElementById('loginId'), loginPass=document.getElementById('loginPass'),
-      loginErr=document.getElementById('loginErr'), loginBtn=document.getElementById('loginBtn'),
-      credsList=document.getElementById('credsList'), showCreds=document.getElementById('showCreds');
+      loginErr=document.getElementById('loginErr'), loginBtn=document.getElementById('loginBtn');
+  var forgotPanel=document.getElementById('forgotPanel'), forgotEmail=document.getElementById('forgotEmail'),
+      forgotErr=document.getElementById('forgotErr'), forgotSend=document.getElementById('forgotSend'),
+      forgotBtn=document.getElementById('forgotBtn'),
+      requestPanel=document.getElementById('requestPanel'), requestBtn=document.getElementById('requestBtn'),
+      reqName=document.getElementById('reqName'), reqEmail=document.getElementById('reqEmail'),
+      reqSection=document.getElementById('reqSection'), reqErr=document.getElementById('reqErr'),
+      reqSend=document.getElementById('reqSend'),
+      loginForm=document.getElementById('loginForm'), loginOk=document.getElementById('loginOk'),
+      loginSub=document.getElementById('loginSub');
+  // extra users/requests persisted locally (offline only; a real server would share them)
+  var EXUSERS = {}; try{ EXUSERS=JSON.parse(localStorage.getItem('alel_extra_users')||'{}'); }catch(e){}
+  var REQS = []; try{ REQS=JSON.parse(localStorage.getItem('alel_access_requests')||'[]'); }catch(e){}
+  function allUsers(){ return USERS.concat(Object.keys(EXUSERS).map(function(k){ return {id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section,hash:EXUSERS[k].hash}; })); }
+  function findUser(em){ var ex=EXUSERS[em]; if(ex) return {id:em,name:ex.name,role:ex.role,section:ex.section,hash:ex.hash}; return USERS.filter(function(x){return x.id===em;})[0]||null; }
+
   function showLogin(){ overlay.style.display='flex'; document.body.style.overflow='hidden'; }
   function hideLogin(){ overlay.style.display='none'; document.body.style.overflow=''; }
+  function showPanel(which){
+    loginForm.style.display = which==='login'?'grid':'none';
+    forgotPanel.style.display = which==='forgot'?'grid':'none';
+    requestPanel.style.display = which==='request'?'grid':'none';
+    loginSub.textContent = which==='login' ? 'Sign in with your office email'
+                        : which==='forgot' ? 'Reset your password' : 'Request access';
+    loginOk.textContent=''; loginErr.textContent='';
+    loginOk.className='ok-msg';
+  }
   function applySession(){
     if(SESSION){ hideLogin(); whoUser.textContent = SESSION.name + ' \u00b7 ' + SESSION.role; }
     else { whoUser.textContent=''; }
+    if(adminBtn){ adminBtn.style.display = (SESSION && SESSION.role==='admin') ? 'inline-flex' : 'none'; }
+    if(SESSION && SESSION.role==='admin'){ renderAdminPanel(); }
     refreshWF();
   }
   logoutBtn.addEventListener('click', function(){
     SESSION=null; try{ localStorage.removeItem('alel_login_v1'); }catch(e){}
-    loginPass.value=''; loginErr.textContent=''; applySession(); showLogin();
+    loginPass.value=''; loginErr.textContent=''; applySession(); showPanel('login'); showLogin();
   });
-  showCreds.addEventListener('click', function(){
-    credsList.style.display = credsList.style.display==='block' ? 'none' : 'block';
-  });
+  function showOk(msg){ loginOk.textContent=msg; loginOk.className='ok-msg show'; }
+  // ---- tab switching ----
+  forgotBtn.addEventListener('click', function(){ showPanel('forgot'); forgotEmail.focus(); });
+  requestBtn.addEventListener('click', function(){ showPanel('request'); reqName.focus(); });
+  document.getElementById('backLogin1').addEventListener('click', function(){ showPanel('login'); });
+  document.getElementById('backLogin2').addEventListener('click', function(){ showPanel('login'); });
+  // ---- login ----
   loginBtn.addEventListener('click', doLogin);
   [loginId, loginPass].forEach(function(i){ i.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); }); });
   function doLogin(){
-    var id=(loginId.value||'').trim().toLowerCase();
+    var email=(loginId.value||'').trim().toLowerCase();
     var pw=loginPass.value||'';
-    if(!id||!pw){ loginErr.textContent='Enter ID and password'; return; }
+    if(!email||!pw){ loginErr.textContent='Enter email and password'; return; }
     sha256Hex(pw).then(function(h){
-      var u=USERS.filter(function(x){ return x.id===id; })[0];
-      if(!u){ loginErr.textContent='Unknown user ID'; return; }
-      if(u.hash!==h){ loginErr.textContent='Wrong password'; return; }
+      var u=findUser(email);
+      if(!u){ loginErr.textContent='No account with this email. Use \u201cRequest access\u201d.'; return; }
+      if(u.hash!==h){ loginErr.textContent='Wrong password. Use \u201cForgot password?\u201d'; return; }
       SESSION={id:u.id,name:u.name,role:u.role,section:u.section};
       try{ localStorage.setItem('alel_login_v1', JSON.stringify(SESSION)); }catch(e){}
       loginErr.textContent=''; loginId.value=''; loginPass.value='';
-      // role default views
       activeView = SESSION.role==='approver' ? 'appr' : 'all';
       setView(activeView);
       applySession();
     });
   }
+  // ---- forgot password ----
+  forgotSend.addEventListener('click', function(){
+    var em=(forgotEmail.value||'').trim().toLowerCase();
+    if(!em){ forgotErr.textContent='Enter your email'; return; }
+    var u=allUsers().filter(function(x){ return x.id===em; })[0];
+    if(!u){ forgotErr.textContent='No account with this email.'; return; }
+    forgotErr.textContent='';
+    var req={type:'reset', email:em, when:new Date().toLocaleString()};
+    REQS.push(req); try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
+    showOk('Reset request sent to the Administrator.\\n(Offline demo: open this page as Admin \u2192 \u201cAdmin panel\u201d to reset the password.)');
+    forgotEmail.value='';
+  });
+  // ---- request access ----
+  reqSend.addEventListener('click', function(){
+    var nm=(reqName.value||'').trim(), em=(reqEmail.value||'').trim().toLowerCase(), sec=reqSection.value;
+    if(!nm||!em){ reqErr.textContent='Enter your name and email'; return; }
+    if(allUsers().filter(function(x){ return x.id===em; }).length){ reqErr.textContent='This email already has an account.'; return; }
+    reqErr.textContent='';
+    REQS.push({type:'access', name:nm, email:em, section:sec, when:new Date().toLocaleString()});
+    try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){}
+    showOk('Access request sent to the Administrator.\\n(Offline demo: the Admin can approve it in the \u201cAdmin panel\u201d.)');
+    reqName.value=''; reqEmail.value=''; reqSection.value='';
+  });
+  // ---- admin panel (visible only to admin) ----
+  var adminBtn=document.getElementById('adminBtn');
+  function renderAdminPanel(){
+    if(!adminBtn) return;
+    var pending=REQS.filter(function(r){ return !r.done; }).length;
+    adminBtn.classList.toggle('has', pending>0);
+    adminBtn.querySelector('i').textContent = pending ? pending : '';
+  }
+  function openAdmin(){
+    var dlg=document.getElementById('adminDlg'); if(!dlg) return;
+    var body=document.getElementById('adminBody'); body.innerHTML='';
+    var h='<h3>Pending requests ('+REQS.filter(function(r){return !r.done;}).length+')</h3>';
+    if(!REQS.filter(function(r){return !r.done;}).length){ h+='<p class="empty">No pending requests.</p>'; }
+    h+='<ul class="req-list">';
+    REQS.forEach(function(r,i){
+      h+='<li data-i="'+i+'"><b>'+(r.name||r.email)+'</b> <span class="rq">'+(r.type==='access'?('Access · '+r.section):'Password reset')+'</span> <span class="rw">'+r.when+'</span>'
+        +'<div class="rq-act">'
+        +(r.type==='access'
+          ? '<button class="mini ok" data-act="grant">Approve</button>'
+          : '<button class="mini ok" data-act="grantpass">Reset pass</button>')
+        +'<button class="mini no" data-act="deny">Deny</button></div></li>';
+    });
+    h+='</ul><h3>Users</h3><ul class="user-list">';
+    allUsers().forEach(function(u){
+      h+='<li><b>'+u.name+'</b> <span>'+u.role+(u.section?' · '+u.section:'')+'</span><code>'+u.id+'</code>'
+        +'<div class="rq-act"><button class="mini" data-act="resetpass" data-em="'+u.id+'">Reset password</button></div></li>';
+    });
+    h+='</ul>';
+    body.innerHTML=h;
+    dlg.style.display='flex';
+    body.querySelectorAll('[data-act]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var li=btn.closest('li'); var idx=li?li.getAttribute('data-i'):null; var em=btn.getAttribute('data-em');
+        if(btn.getAttribute('data-act')==='grant'||btn.getAttribute('data-act')==='grantpass'){
+          var r=REQS[idx];
+          if(r.type==='access'){ grantAccess(r.email, r.name, r.section); }
+          else { resetUser(r.email); }
+          r.done=true; saveReqs(); openAdmin();
+        } else if(btn.getAttribute('data-act')==='deny'){
+          REQS.splice(idx,1); saveReqs(); openAdmin();
+        } else if(btn.getAttribute('data-act')==='resetpass'){
+          resetUser(em); openAdmin();
+        }
+      });
+    });
+  }
+  function saveReqs(){ try{ localStorage.setItem('alel_access_requests', JSON.stringify(REQS)); }catch(e){} }
+  function grantAccess(em, nm, sec){
+    var role = (sec==='GSS'||sec==='LED'||sec==='HAP') ? 'checker' : 'prepared';
+    var pass=makePass();
+    sha256Hex(pass).then(function(h){
+      EXUSERS[em]={name:nm, role:role, section:sec||'', hash:h};
+      try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
+      alert('Account created for '+em+'.\\nRole: '+role+(sec?' ('+sec+')':'')+'\\nLogin password: '+pass+'\\n(Share this with the user.)');
+    });
+  }
+  function resetUser(em){
+    var pass=makePass();
+    sha256Hex(pass).then(function(h){
+      var u=USERS.filter(function(x){return x.id===em;})[0];
+      if(u){ EXUSERS[em]={name:u.name, role:u.role, section:u.section, hash:h}; }
+      else if(EXUSERS[em]){ EXUSERS[em].hash=h; }
+      try{ localStorage.setItem('alel_extra_users', JSON.stringify(EXUSERS)); }catch(e){}
+      alert('Password reset for '+em+'.\\nNew temporary password: '+pass);
+    });
+  }
+  function makePass(){ return 'Al@'+(Math.floor(1000+Math.random()*9000)); }
+  function closeAdmin(){ var d=document.getElementById('adminDlg'); if(d) d.style.display='none'; }
+  if(adminBtn) adminBtn.addEventListener('click', openAdmin);
+  var admClose=document.getElementById('admClose'); if(admClose) admClose.addEventListener('click', closeAdmin);
   // bootstrap
-  if(!SESSION){ showLogin(); }
+  if(!SESSION){ showLogin(); showPanel('login'); }
   else { applySession(); }
 
   /* ---------- role helpers ---------- */
@@ -1134,10 +1316,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       var d=document.createElement('div'); d.className='sg';
       d.innerHTML='<b>'+c.n.replace(/</g,'&lt;')+'</b><span class="sc">'+c.c+'</span><span class="ss">'+c.s+'</span>';
       d.addEventListener('mousedown', function(ev){ ev.preventDefault(); qEl.value=c.n; sugg.style.display='none';
-        var b=codeOf[c.c]; if(b){ activeGroup='all'; syncChips(); setView('all'); apply(); b.scrollIntoView({behavior:'smooth',block:'start'}); b.style.animation='hl 1.2s ease'; setTimeout(function(){b.style.animation='';},1300);} });
+        var b=codeOf[c.c]; if(b){ activeSec='all'; syncChips(); setView('all'); apply(); b.scrollIntoView({behavior:'smooth',block:'start'}); b.style.animation='hl 1.2s ease'; setTimeout(function(){b.style.animation='';},1300);} });
       sugg.appendChild(d);
     });
-    hilite(items?null:sugg.querySelectorAll('.sg'));
+    hilite(sugg.querySelectorAll('.sg'));
     sugg.style.display='block';
   }
   document.addEventListener('click', function(e){ if(!e.target.closest('.tb-row2')) sugg.style.display='none'; });
@@ -1148,10 +1330,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     document.querySelectorAll('#viewFld button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v')===v); });
     apply(); }
   document.getElementById('viewFld').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setView(b.getAttribute('data-v')); });
-  function syncChips(){ chipsEl.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on', c.getAttribute('data-g')===activeGroup); }); }
+  function syncChips(){ chipsEl.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on', c.getAttribute('data-sec')===activeSec); }); }
   chipsEl.addEventListener('click', function(e){
     var c=e.target.closest('.chip'); if(!c)return;
-    activeGroup=c.getAttribute('data-g'); syncChips(); apply();
+    activeSec=c.getAttribute('data-sec'); syncChips(); apply();
   });
 
   // default: prepared (Anoy) is auto-signed for every bulletin -> p starts 1
@@ -1174,7 +1356,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     var n=0, np=0, na=0;
     bullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
-      if(show && activeGroup!=='all' && b.getAttribute('data-group')!==activeGroup) show=false;
+      if(show && activeSec!=='all' && b.getAttribute('data-sec')!==activeSec) show=false;
       var s=stOf(b);
       if(show && activeView==='pend' && s.a===1) show=false;
       if(show && activeView==='appr' && !(s.a===1)) show=false;
