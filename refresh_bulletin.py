@@ -29,7 +29,7 @@ HOME_URL = "operation-bulletin.html"   # relative link used by the topbar logo (
 MAX_SIDE = 520  # px for embedded product images
 
 # ---------------- Approval workflow configuration ----------------
-PREPARED_BY = {"name": "Anoy Kumar Das", "role": "Operational Excellence / I.E."}
+PREPARED_BY = {"name": "Anoy Kumar Das", "role": "Operational Excellence / OPEX"}
 APPROVED_BY = {"name": "Md. Moshfequr Rahman", "role": "Plant Head", "email": "head.plant@akijlightengineering.com"}
 CHECKER_BY_SECTION = {
     "GSS": {"name": "Jhumour Rani", "email": "jhumour@akijlightengineering.com"},
@@ -388,7 +388,9 @@ IC = {
 def build_html(results, media_bytes, out_path=None):
     log("[3/4] Generating modern HTML ...")
     img_cache = {}
-    today = datetime.date.today().strftime("%d-%b-%Y")
+    now = datetime.datetime.now()
+    today = now.strftime("%d-%b-%Y")
+    buildstamp = now.strftime("%Y-%m-%d %H:%M:%S")
 
     def img_of(results, key):
         for r in results:
@@ -419,6 +421,8 @@ def build_html(results, media_bytes, out_path=None):
 
         smv, mp, hc, prod = (num(h.get(k)) for k in ("smv", "mp", "hc", "prod"))
         sum_smv = sum(num(o.get("P")) or 0 for o in ops)
+        has_real = any((o.get("B") or "").strip() and (num(o.get("P")) or 0) > 0 for o in ops)
+        realflag = "1" if has_real else "0"
         smv_eff = smv if smv is not None else (sum_smv if sum_smv else None)
         sum_mp_ops = sum(num(o.get("F")) or 0 for o in ops)
         mp_eff = mp if mp is not None else (sum_mp_ops if sum_mp_ops else None)
@@ -521,11 +525,11 @@ def build_html(results, media_bytes, out_path=None):
         ops_data = esc(json.dumps(ops_json, ensure_ascii=False))
 
         bullets.append(
-            f'<section class="bulletin" id="ob-{idx}" data-name="{esc(name.lower())}" '
+            f'<section class="bulletin{" incomplete" if not has_real else ""}" id="ob-{idx}" data-name="{esc(name.lower())}" '
             f'data-code="{esc(code.lower())}" data-group="{esc(group.lower())}" '
             f'data-sec="{esc(section.lower())}" data-sheet="{esc(r["sheet"].lower())}" '
             f'data-smv="{smv_eff if smv_eff else 0}" data-mp="{mp_eff if mp_eff else 0}" '
-            f'data-ops="{ops_data}">'
+            f'data-hasreal="{realflag}" data-ops="{ops_data}">'
 
             f'<div class="b-head">'
             f'<div class="b-brand">'
@@ -535,6 +539,7 @@ def build_html(results, media_bytes, out_path=None):
             f'</div>'
             f'<div class="b-badges"><span class="obn">OB-{idx:04d}</span>'
             f'<span class="secp sec-{esc(section.lower())}">{esc(sec_tag)}</span>'
+            f'{"" if has_real else "<span class=\"incomp\">&#9888; Incomplete</span>"}'
             f'<span class="aprv" data-role="status">Pending</span>'
             f'</div></div>'
 
@@ -627,6 +632,7 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%CHIPS%", chip_html) \
                             .replace("%TOTAL%", str(len(results))) \
                             .replace("%REFRESHED%", today) \
+                            .replace("%BUILDSTAMP%", buildstamp) \
                             .replace("%CATALOG%", cat_json) \
                             .replace("%PEOPLE%", people_json) \
                             .replace("%USERS%", users_json) \
@@ -854,6 +860,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .statbar .fld button{background:rgba(255,255,255,.1);color:#cfd9ea;border:1px solid rgba(255,255,255,.15);
         border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;}
   .statbar .fld button.on{background:linear-gradient(135deg,#ffb02e,#ff6b35);color:#fff;border-color:transparent;}
+  .sortsel{margin-left:auto;background:#16233d;color:#e7eef9;border:1px solid rgba(255,255,255,.2);border-radius:10px;
+           padding:6px 8px;font-size:11.5px;outline:none;font-family:inherit;max-width:180px;}
 
   /* ---------- home view ---------- */
   #homeView{display:block;}
@@ -905,6 +913,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .aprv.a-done{background:linear-gradient(135deg,#12b886,#0b7a5f);border-color:transparent;}
   .aprv.a-pend{background:linear-gradient(135deg,#ffb02e,#ff6b35);border-color:transparent;}
   .aprv.a-prep{background:linear-gradient(135deg,#5b8def,#3b62c7);border-color:transparent;}
+  .incomp{font-size:10px;font-weight:800;padding:4px 9px;border-radius:999px;color:#7a4a00;
+          background:#fff0cf;border:1px solid #e8c37a;}
   .kv-row{display:flex;gap:16px;padding:14px 20px 6px;align-items:flex-start;}
   .photo{flex:0 0 110px;width:110px;height:118px;border:1px solid var(--line);border-radius:12px;padding:6px;
          background:linear-gradient(180deg,#fff,var(--soft));position:relative;display:flex;align-items:center;justify-content:center;}
@@ -1153,7 +1163,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
       <div class="sugg" id="sugg"></div>
     </div>
-    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b></div>
+    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b> at <b id="refTime">%BUILDSTAMP%</b> &middot; <span id="liveClock"></span></div>
   </div>
   <div class="chips" id="chips">%CHIPS%</div>
 </div>
@@ -1238,7 +1248,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="on" data-v="all">All</button>
       <button data-v="pend">Pending</button>
       <button data-v="appr">Approved Only</button>
+      <button data-v="inc" id="onlyInc" title="Show only incomplete bulletins">&#9888; Incomplete</button>
     </div>
+    <select id="sortSel" class="sortsel" title="Sort bulletins">
+      <option value="ob">OB number</option>
+      <option value="name">Name A→Z</option>
+      <option value="smvhi">SMV: high → low</option>
+      <option value="smvlo">SMV: low → high</option>
+      <option value="mph">Manpower: high → low</option>
+      <option value="sec">Section</option>
+    </select>
   </div>
   %BULLETINS%
   <div class="msg" id="msg"><b>No bulletins found.</b></div>
@@ -1452,7 +1471,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   function makePass(){ return 'Al@'+(Math.floor(1000+Math.random()*9000)); }
   function closeAdmin(){ var d=document.getElementById('adminDlg'); if(d) d.style.display='none'; }
   if(adminBtn) adminBtn.addEventListener('click', openAdmin);
-  var admClose=document.getElementById('admClose'); if(admClose) admClose.addEventListener('click', closeAdmin);
+  var admClose=document.getElementById('admClose'); if(admClose) admClose  .addEventListener('click', closeAdmin);
+  // live clock (seconds)
+  function pad2(x){ return (x<10?'0':'')+x; }
+  function tickClock(){
+    var el=document.getElementById('liveClock'); if(!el) return;
+    var d=new Date();
+    var zone=''; try{ zone = ' ('+Intl.DateTimeFormat().resolvedOptions().timeZone+')'; }catch(e){}
+    el.textContent = 'Now: '+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())+zone+' · auto-syncs from Google Sheets every ~5 min';
+  }
+  tickClock(); setInterval(tickClock, 1000);
   // bootstrap
   var URLSEC = (location.search.match(/[?&]sec=([a-z0-9]*)/i)||[])[1] || '';
   var homeView=document.getElementById('homeView'), listWrap=document.getElementById('listWrap');
@@ -1563,6 +1591,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       var s=stOf(b);
       if(show && activeView==='pend' && s.a===1) show=false;
       if(show && activeView==='appr' && !(s.a===1)) show=false;
+      if(show && activeView==='inc' && !b.classList.contains('incomplete')) show=false;
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'',
             sc=b.getAttribute('data-sec')||'', sh=b.getAttribute('data-sheet')||'';
@@ -1686,6 +1715,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     var s=stOf(b); setState(s.code,field,0); refreshWF();
   }
   refreshWF();
+
+  /* ---------- sort bulletins in list view ---------- */
+  var sortSel=document.getElementById('sortSel');
+  if(sortSel){
+    sortSel.addEventListener('change', function(){ sortBullets(sortSel.value); });
+    function sortBullets(mode){
+      var host=listWrap||document.getElementById('listWrap'); if(!host) return;
+      var arr=bullets.slice();
+      arr.sort(function(a,b){
+        function v(s){ var x=parseFloat(s.getAttribute('data-smv')); return isNaN(x)?-1:x; }
+        if(mode==='name'){ return (a.getAttribute('data-name')||'').localeCompare(b.getAttribute('data-name')||''); }
+        if(mode==='sec'){ return (a.getAttribute('data-sec')||'').localeCompare(b.getAttribute('data-sec')||'') || v(b)-v(a); }
+        if(mode==='smvhi'){ return v(b)-v(a); }
+        if(mode==='smvlo'){ return v(a)-v(b); }
+        if(mode==='mph'){ var ma=parseFloat(a.getAttribute('data-mp')||'0'), mb=parseFloat(b.getAttribute('data-mp')||'0'); return mb-ma; }
+        var na=parseInt((a.id||'0').replace('ob-',''),10)||0, nb=parseInt((b.id||'0').replace('ob-',''),10)||0; return na-nb;
+      });
+      arr.forEach(function(b){ host.appendChild(b); });
+      apply();
+    }
+  }
 
   /* ---------- manpower live ---------- */
   function fmtNum(x,d){ if(x===null||x===undefined||isNaN(x)) return '&ndash;';
