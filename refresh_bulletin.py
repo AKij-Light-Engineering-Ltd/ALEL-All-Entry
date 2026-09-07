@@ -43,7 +43,7 @@ STORE_KEY = "alel_approvals_v1"
 # section (for checker): GSS | LED | HAP
 USERS = [
     {"id": "md.marufhossain@akijlightengineering.com", "name": "Md. Maruf Hossain",        "role": "admin",     "section": "", "pass": "admin123"},
-    {"id": "anoy@akijlightengineering.com",             "name": "Anoy Kumar Das",          "role": "prepared",  "section": "", "pass": "anoy123"},
+    {"id": "anoy@akijlightengineering.com",             "name": "Anoy Kumar Das",          "role": "prepared",  "section": "", "pass": "anoy2233"},
     {"id": "jhumour@akijlightengineering.com",          "name": "Jhumour Rani",            "role": "checker",   "section": "GSS", "pass": "gss123"},
     {"id": "kajal04@akijlightengineering.com",          "name": "Kajal Kanti",             "role": "checker",   "section": "LED", "pass": "led123"},
     {"id": "almamun@akijlightengineering.com",          "name": "Abdullah Al-Mamun",       "role": "checker",   "section": "HAP", "pass": "hap123"},
@@ -1406,11 +1406,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   var adminBtn=document.getElementById('adminBtn');
   function renderAdminPanel(){
     if(!adminBtn) return;
+    reloadStore();
     var pending=REQS.filter(function(r){ return !r.done; }).length;
     adminBtn.classList.toggle('has', pending>0);
     adminBtn.querySelector('i').textContent = pending ? pending : '';
   }
+  function reloadStore(){
+    try{ EXUSERS=JSON.parse(localStorage.getItem('alel_extra_users')||'{}'); }catch(e){ EXUSERS={}; }
+    try{ REQS=JSON.parse(localStorage.getItem('alel_access_requests')||'[]'); }catch(e){ REQS=[]; }
+    // merge extra users into a fresh list each time
+  }
+  // keep admin badge/requests live (same browser / other tabs)
+  window.addEventListener('storage', function(ev){
+    if(ev.key==='alel_access_requests'||ev.key==='alel_extra_users'||ev.key==='alel_approvals_v1'){
+      reloadStore();
+      if(SESSION && SESSION.role==='admin') renderAdminPanel();
+    }
+  });
+  setInterval(function(){ if(SESSION && SESSION.role==='admin') renderAdminPanel(); }, 2500);
   function openAdmin(){
+    reloadStore();
     var dlg=document.getElementById('adminDlg'); if(!dlg) return;
     var body=document.getElementById('adminBody'); body.innerHTML='';
     var h='<h3>Pending requests ('+REQS.filter(function(r){return !r.done;}).length+')</h3>';
@@ -1439,11 +1454,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           var r=REQS[idx];
           if(r.type==='access'){ grantAccess(r.email, r.name, r.section); }
           else { resetUser(r.email); }
-          r.done=true; saveReqs(); openAdmin();
+          r.done=true; saveReqs(); reloadStore(); openAdmin();
         } else if(btn.getAttribute('data-act')==='deny'){
-          REQS.splice(idx,1); saveReqs(); openAdmin();
+          REQS.splice(idx,1); saveReqs(); reloadStore(); openAdmin();
         } else if(btn.getAttribute('data-act')==='resetpass'){
-          resetUser(em); openAdmin();
+          resetUser(em); reloadStore(); openAdmin();
         }
       });
     });
