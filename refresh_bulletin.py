@@ -23,6 +23,8 @@ SHEET_ID = "1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo"
 HERE = os.path.dirname(os.path.abspath(__file__))
 XLSX_TMP = os.path.join(HERE, "_latest_capacity_study.xlsx")
 OUT_HTML = os.path.join(HERE, "ALEL_Operation_Bulletin_Searchable.html")
+OUT_HOME = os.path.join(HERE, "ob-home.html")
+HOME_URL = "ob-home.html"   # relative link used by the topbar logo
 
 MAX_SIDE = 520  # px for embedded product images
 
@@ -613,6 +615,7 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%CATALOG%", cat_json) \
                             .replace("%PEOPLE%", people_json) \
                             .replace("%USERS%", users_json) \
+                            .replace("%HOME_URL%", HOME_URL) \
                             .replace("%ICON_SEARCH%", IC["search"]) \
                             .replace("%ICON_REFRESH%", IC["refresh"])
     dest = out_path or OUT_HTML
@@ -622,10 +625,108 @@ def build_html(results, media_bytes, out_path=None):
     log("      size MB: " + str(round(os.path.getsize(dest) / 1048576, 2)))
 
 
+def build_home(results, media_bytes, dest=None):
+    """Builds ob-home.html: GSS/LED/HAP section cards linking into the bulletin."""
+    log("      building home page ...")
+    img_cache = {}
+    today = datetime.date.today().strftime("%d-%b-%Y")
+
+    # pick one representative product + image per section (first bulletin that has an image)
+    rep = {"GSS": None, "LED": None, "HAP": None}
+    for r in results:
+        sec = (r.get("section") or "").upper()
+        if sec in rep and rep[sec] is None and r.get("image"):
+            img = image_uri(r["image"], media_bytes, img_cache)
+            rep[sec] = {"name": r["header"].get("name") or r["sheet"],
+                        "img": img,
+                        "n": sum(1 for x in results if (x.get("section") or "").upper() == sec)}
+
+    cards = []
+    for sec, meta in [("GSS", rep["GSS"]), ("LED", rep["LED"]), ("HAP", rep["HAP"])]:
+        link = "ALEL_Operation_Bulletin_Searchable.html?sec=" + sec.lower()
+        if meta:
+            n = meta["n"]
+            img = f'<img src="{meta["img"]}" alt="">'
+            subtitle = f"{n} bulletins ready"
+            extra = ""
+            tag = "a"
+        else:
+            n = 0
+            img = ""
+            subtitle = "No data yet — add this section in Google Sheet, it will appear automatically"
+            extra = ' class="soon-link"'
+            link = "ob-home.html"
+            tag = "a"
+        badge = f'<span class="scard-badge scard-badge-{sec.lower()}">{sec}</span>'
+        cards.append(
+            f'<{tag} class="scard scard-{sec.lower()}" href="{link}"{extra}>'
+            f'<div class="scard-img">{img or f"<span class=\"soon\">No<br>image yet</span>"}</div>'
+            f'<div class="scard-body">{badge}'
+            f'<h3>{sec} Section</h3><p>{subtitle}</p>'
+            f'<span class="scard-cta">{f"Open {n} Bulletins" if n else "Coming soon"} &rarr;</span></div></{tag}>')
+
+    def footer_cell(s):
+        return s
+
+    doc = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ALEL Operation Bulletin — Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0;}}
+  body{{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:#0f172a;
+        background:radial-gradient(1100px 500px at 85% -10%,rgba(124,92,240,.22),transparent 60%),
+                   radial-gradient(900px 500px at -10% 110%,rgba(14,159,122,.20),transparent 55%),
+                   linear-gradient(160deg,#0b1020,#111a30);padding:0 16px 60px;}}
+  .hero{{max-width:760px;margin:0 auto;text-align:center;color:#fff;padding:54px 0 26px;}}
+  .hero .logo{{width:62px;height:62px;border-radius:17px;margin:0 auto 14px;display:grid;place-items:center;font-size:30px;
+               background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 14px 34px -8px rgba(14,159,122,.7);}}
+  .hero .eyebrow{{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9fd8c6;}}
+  .hero h1{{font-family:'Sora',sans-serif;font-size:clamp(24px,4.5vw,38px);margin:6px 0 8px;}}
+  .hero p{{color:#c6d6ea;font-size:14px;line-height:1.6;}}
+  .grid{{max-width:960px;margin:0 auto;display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}}
+  .scard{{display:flex;flex-direction:column;background:#fff;border-radius:20px;overflow:hidden;text-decoration:none;color:inherit;
+         box-shadow:0 24px 60px -24px rgba(0,0,0,.6);transition:.2s;border:1px solid rgba(255,255,255,.5);}}
+  .scard:hover{{transform:translateY(-4px);box-shadow:0 30px 70px -24px rgba(0,0,0,.7);}}
+  .scard.disabled{{opacity:.55;filter:grayscale(.4);pointer-events:none;}}
+  .scard-img{{height:190px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#f2f6fb);}}
+  .scard-img img{{max-width:78%;max-height:170px;object-fit:contain;filter:drop-shadow(0 12px 22px rgba(20,40,70,.18));}}
+  .scard-img .soon{{color:#9fb0c4;font-size:13px;font-weight:700;text-align:center;line-height:1.4;}}
+  .scard-body{{padding:16px 18px 18px;}}
+  .scard-badge{{display:inline-block;font-weight:800;font-size:11px;letter-spacing:.1em;color:#fff;border-radius:99px;
+               padding:3px 12px;background:linear-gradient(135deg,#0f2b46,#1d4567);}}
+  .scard-badge-gss{{background:#3b62c7;}}
+  .scard-badge-led{{background:#e08b1d;}}
+  .scard-badge-hap{{background:#0e9f7a;}}
+  a.soon-link{{pointer-events:none;cursor:default;opacity:.72;filter:grayscale(.4);}}  a.soon-link:hover{{transform:none;}}
+  .scard h3{{font-family:'Sora',sans-serif;font-size:20px;margin:8px 0 4px;}}
+  .scard p{{font-size:12.5px;color:#5b6b81;line-height:1.5;margin-bottom:12px;}}
+  .scard-cta{{display:inline-block;font-size:13px;font-weight:800;color:#0b7a5f;}}
+  .scard:hover .scard-cta{{text-decoration:underline;}}
+  .foot{{max-width:760px;margin:34px auto 0;color:#8fa0bb;font-size:11.5px;text-align:center;line-height:1.6;}}
+</style></head><body>
+  <div class="hero">
+    <div class="logo">&#9889;</div>
+    <div class="eyebrow">ALEL Industries Limited &middot; Operational Excellence</div>
+    <h1>Operation Bulletin</h1>
+    <p>Choose a section to view its product operation bulletins, SMV studies and approvals.</p>
+  </div>
+  <div class="grid">{''.join(cards)}</div>
+  <div class="foot">Updated {today} &middot; Adding a new product tab in the Google Sheet automatically syncs it here after refresh. &middot; Operational Excellence</div>
+</body></html>"""
+    d = dest or OUT_HOME
+    with open(d, "w", encoding="utf-8") as f:
+        f.write(doc)
+    log("      written: " + d)
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="ALEL Operation Bulletin generator")
     ap.add_argument("--output", default=None)
+    ap.add_argument("--home-output", default=None)
     ap.add_argument("--sheet-id", default=None)
     args = ap.parse_args()
     global SHEET_ID, XLSX_TMP
@@ -638,6 +739,7 @@ def main():
         if len(results) < 50:
             raise SystemExit("Expected 100+ bulletins, got %d" % len(results))
         build_html(results, media, out_path=args.output)
+        build_home(results, media, dest=args.home_output)
         log("[4/4] DONE.")
     except SystemExit as e:
         log(str(e))
@@ -881,7 +983,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .foot{max-width:1280px;margin:10px auto;padding:0 16px;color:#6f83a3;font-size:11px;text-align:center;}
 
   /* ---------- login overlay ---------- */
-  .login{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  .login{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
          padding:16px;background:radial-gradient(900px 500px at 80% -10%,rgba(124,92,240,.28),transparent 55%),
          radial-gradient(700px 400px at -10% 110%,rgba(14,159,122,.25),transparent 55%),
          linear-gradient(160deg,#0b1020,#111a30);}
@@ -981,7 +1083,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="tb-in">
     <div class="tb-row1">
       <div class="brand-h">
-        <a class="logo-link" href="https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/" title="Back to ALEL Home">
+        <a class="logo-link" href="%HOME_URL%" title="Operation Bulletin Home">
           <div class="logo">&#127968;</div>
         </a>
         <h1>ALEL Operation Bulletin<small>Live SMV &amp; Digital Approval</small></h1>
@@ -1130,8 +1232,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   function allUsers(){ return USERS.concat(Object.keys(EXUSERS).map(function(k){ return {id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section,hash:EXUSERS[k].hash}; })); }
   function findUser(em){ var ex=EXUSERS[em]; if(ex) return {id:em,name:ex.name,role:ex.role,section:ex.section,hash:ex.hash}; return USERS.filter(function(x){return x.id===em;})[0]||null; }
 
-  function showLogin(){ overlay.style.display='flex'; document.body.style.overflow='hidden'; }
-  function hideLogin(){ overlay.style.display='none'; document.body.style.overflow=''; }
+  function showLogin(){ overlay.classList.add('show'); overlay.style.display='flex'; document.body.style.overflow='hidden'; }
+  function hideLogin(){ overlay.classList.remove('show'); overlay.style.display='none'; document.body.style.overflow=''; }
   function showPanel(which){
     loginForm.style.display = which==='login'?'grid':'none';
     forgotPanel.style.display = which==='forgot'?'grid':'none';
@@ -1271,8 +1373,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   if(adminBtn) adminBtn.addEventListener('click', openAdmin);
   var admClose=document.getElementById('admClose'); if(admClose) admClose.addEventListener('click', closeAdmin);
   // bootstrap
+  var URLSEC = (location.search.match(/[?&]sec=([a-z0-9]+)/i)||[])[1] || '';
   if(!SESSION){ showLogin(); showPanel('login'); }
   else { applySession(); }
+  if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); }
 
   /* ---------- role helpers ---------- */
   function canSee(b){

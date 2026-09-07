@@ -33,8 +33,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet operation-bulletin.html; then
-            git add operation-bulletin.html
+          if ! git diff --quiet operation-bulletin.html || ! git diff --quiet ob-home.html; then
+            git add operation-bulletin.html ob-home.html
             git commit -m "Auto-sync: refresh bulletin from Google Sheets"
             git push
           else

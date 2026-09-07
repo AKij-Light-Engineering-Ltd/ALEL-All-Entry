@@ -230,7 +230,7 @@
   .foot{max-width:1280px;margin:10px auto;padding:0 16px;color:#6f83a3;font-size:11px;text-align:center;}
 
   /* ---------- login overlay ---------- */
-  .login{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  .login{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
          padding:16px;background:radial-gradient(900px 500px at 80% -10%,rgba(124,92,240,.28),transparent 55%),
          radial-gradient(700px 400px at -10% 110%,rgba(14,159,122,.25),transparent 55%),
          linear-gradient(160deg,#0b1020,#111a30);}
@@ -330,7 +330,7 @@
   <div class="tb-in">
     <div class="tb-row1">
       <div class="brand-h">
-        <a class="logo-link" href="https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/" title="Back to ALEL Home">
+        <a class="logo-link" href="ob-home.html" title="Operation Bulletin Home">
           <div class="logo">&#127968;</div>
         </a>
         <h1>ALEL Operation Bulletin<small>Live SMV &amp; Digital Approval</small></h1>
@@ -479,8 +479,8 @@
   function allUsers(){ return USERS.concat(Object.keys(EXUSERS).map(function(k){ return {id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section,hash:EXUSERS[k].hash}; })); }
   function findUser(em){ var ex=EXUSERS[em]; if(ex) return {id:em,name:ex.name,role:ex.role,section:ex.section,hash:ex.hash}; return USERS.filter(function(x){return x.id===em;})[0]||null; }
 
-  function showLogin(){ overlay.style.display='flex'; document.body.style.overflow='hidden'; }
-  function hideLogin(){ overlay.style.display='none'; document.body.style.overflow=''; }
+  function showLogin(){ overlay.classList.add('show'); overlay.style.display='flex'; document.body.style.overflow='hidden'; }
+  function hideLogin(){ overlay.classList.remove('show'); overlay.style.display='none'; document.body.style.overflow=''; }
   function showPanel(which){
     loginForm.style.display = which==='login'?'grid':'none';
     forgotPanel.style.display = which==='forgot'?'grid':'none';
@@ -620,8 +620,10 @@
   if(adminBtn) adminBtn.addEventListener('click', openAdmin);
   var admClose=document.getElementById('admClose'); if(admClose) admClose.addEventListener('click', closeAdmin);
   // bootstrap
+  var URLSEC = (location.search.match(/[?&]sec=([a-z0-9]+)/i)||[])[1] || '';
   if(!SESSION){ showLogin(); showPanel('login'); }
   else { applySession(); }
+  if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); }
 
   /* ---------- role helpers ---------- */
   function canSee(b){
