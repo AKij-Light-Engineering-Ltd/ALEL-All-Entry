@@ -24,7 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 XLSX_TMP = os.path.join(HERE, "_latest_capacity_study.xlsx")
 OUT_HTML = os.path.join(HERE, "ALEL_Operation_Bulletin_Searchable.html")
 OUT_HOME = os.path.join(HERE, "ob-home.html")
-HOME_URL = "ob-home.html"   # relative link used by the topbar logo
+HOME_URL = "operation-bulletin.html"   # relative link used by the topbar logo (goes to home view of this file)
 
 MAX_SIDE = 520  # px for embedded product images
 
@@ -389,6 +389,21 @@ def build_html(results, media_bytes, out_path=None):
     log("[3/4] Generating modern HTML ...")
     img_cache = {}
     today = datetime.date.today().strftime("%d-%b-%Y")
+
+    def img_of(results, key):
+        for r in results:
+            nm = (r["header"].get("name") or r["sheet"])
+            if key.lower() in nm.lower() and r.get("image"):
+                return f'<img src="{image_uri(r["image"], media_bytes, img_cache)}" alt="">'
+        for r in results:
+            if r.get("image"):
+                return f'<img src="{image_uri(r["image"], media_bytes, img_cache)}" alt="">'
+        return '<span class="soon">No image</span>'
+
+    homegss = img_of(results, "LUMIGOLD 5 PIN MULTI SOCKET WITH SWITCH 13A")
+    homeled = img_of(results, "AC LED BULB 5W B22 DL")
+    homehap = img_of(results, "HAP")   # fallback = first available or soon
+
     bullets = []
     catalog = []
     for idx, r in enumerate(results, start=1):
@@ -616,6 +631,9 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%PEOPLE%", people_json) \
                             .replace("%USERS%", users_json) \
                             .replace("%HOME_URL%", HOME_URL) \
+                            .replace("%HOMEGSS%", homegss) \
+                            .replace("%HOMELED%", homeled) \
+                            .replace("%HOMEHAP%", homehap) \
                             .replace("%ICON_SEARCH%", IC["search"]) \
                             .replace("%ICON_REFRESH%", IC["refresh"])
     dest = out_path or OUT_HTML
@@ -836,6 +854,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .statbar .fld button{background:rgba(255,255,255,.1);color:#cfd9ea;border:1px solid rgba(255,255,255,.15);
         border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;}
   .statbar .fld button.on{background:linear-gradient(135deg,#ffb02e,#ff6b35);color:#fff;border-color:transparent;}
+
+  /* ---------- home view ---------- */
+  #homeView{display:block;}
+  #listWrap{display:none;}
+  body:not(.onhome) #homeView{display:none !important;}
+  body.onhome #listWrap{display:none !important;}
+  body.onhome .chips, body.onhome .tb-note{display:none !important;}
+  .home-view{min-height:60vh;}
+  .hv-inner{max-width:1000px;margin:0 auto;padding:26px 6px;}
+  .hv-hero{text-align:center;color:#fff;padding:8px 0 24px;}
+  .hv-logo{width:64px;height:64px;border-radius:18px;margin:0 auto 12px;display:grid;place-items:center;font-size:32px;
+           background:linear-gradient(135deg,#12b886,#0b7a5f);box-shadow:0 14px 36px -8px rgba(14,159,122,.7);}
+  .hv-eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9fd8c6;}
+  .hv-hero h1{font-family:'Sora',sans-serif;font-size:clamp(26px,4.6vw,40px);margin:6px 0 6px;}
+  .hv-hero p{color:#c6d6ea;font-size:13.5px;max-width:520px;margin:0 auto;line-height:1.6;}
+  .hv-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .hv-card{display:flex;flex-direction:column;background:#fff;border-radius:18px;overflow:hidden;text-decoration:none;
+           color:inherit;box-shadow:0 22px 55px -22px rgba(0,0,0,.55);transition:.2s;border:1px solid rgba(255,255,255,.5);}
+  .hv-card:hover{transform:translateY(-4px);}
+  .hv-img{height:180px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#f0f5fb);}
+  .hv-img img{max-width:78%;max-height:160px;object-fit:contain;filter:drop-shadow(0 12px 22px rgba(20,40,70,.16));}
+  .hv-img .soon{color:#9fb0c4;font-weight:700;font-size:12px;}
+  .hv-body{padding:14px 16px 16px;display:flex;flex-direction:column;}
+  .hv-badge{width:max-content;font-weight:800;font-size:11px;letter-spacing:.1em;padding:3px 12px;border-radius:99px;color:#fff;}
+  .hv-gss .hv-badge{background:#3b62c7;} .hv-led .hv-badge{background:#e08b1d;} .hv-hap .hv-badge{background:#0e9f7a;}
+  .hv-body h3{font-family:'Sora',sans-serif;font-size:19px;margin:8px 0 3px;}
+  .hv-body p{font-size:12px;color:#5b6b81;line-height:1.45;margin-bottom:8px;}
+  .hv-n{font-size:11px;color:#0b7a5f;font-weight:700;margin-bottom:8px;}
+  .hv-cta{font-size:12.5px;font-weight:800;color:#0b7a5f;}
+  .hv-card:hover .hv-cta{text-decoration:underline;}
 
   /* ---------- bulletin card ---------- */
   .bulletin{background:var(--card);border-radius:var(--r);margin:0 0 20px;overflow:hidden;box-shadow:var(--shadow);
@@ -1083,7 +1131,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="tb-in">
     <div class="tb-row1">
       <div class="brand-h">
-        <a class="logo-link" href="%HOME_URL%" title="Operation Bulletin Home">
+        <a class="logo-link" href="?sec=" title="Operation Bulletin Home">
           <div class="logo">&#127968;</div>
         </a>
         <h1>ALEL Operation Bulletin<small>Live SMV &amp; Digital Approval</small></h1>
@@ -1153,6 +1201,37 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 <main>
+  <div class="home-view" id="homeView">
+    <div class="hv-inner">
+      <div class="hv-hero">
+        <div class="hv-logo">&#9889;</div>
+        <div class="hv-eyebrow">ALEL Industries Limited &middot; Operational Excellence</div>
+        <h1>Operation Bulletin</h1>
+        <p>Select a section to open its product bulletins, SMV studies &amp; approvals.</p>
+      </div>
+      <div class="hv-grid">
+        <a class="hv-card hv-gss" href="?sec=gss" data-go="gss">
+          <div class="hv-img">%HOMEGSS%</div>
+          <div class="hv-body"><span class="hv-badge">GSS</span><h3>GSS Section</h3>
+          <p>ENOVAR wiring accessories &amp; switches</p><span class="hv-n" data-seccnt="gss"></span>
+          <span class="hv-cta">Open Bulletins &rarr;</span></div>
+        </a>
+        <a class="hv-card hv-led" href="?sec=led" data-go="led">
+          <div class="hv-img">%HOMELED%</div>
+          <div class="hv-body"><span class="hv-badge">LED</span><h3>LED Section</h3>
+          <p>ENOVAR LED bulbs, panels &amp; luminaires</p><span class="hv-n" data-seccnt="led"></span>
+          <span class="hv-cta">Open Bulletins &rarr;</span></div>
+        </a>
+        <a class="hv-card hv-hap" href="?sec=hap" data-go="hap">
+          <div class="hv-img">%HOMEHAP%</div>
+          <div class="hv-body"><span class="hv-badge">HAP</span><h3>HAP Section</h3>
+          <p>Home appliances &amp; products (coming)</p><span class="hv-n" data-seccnt="hap"></span>
+          <span class="hv-cta">Open Bulletins &rarr;</span></div>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div id="listWrap">
   <div class="statbar">
     <div class="lt"><span id="cnt">0</span> shown &middot; Pending <span id="cntPend">0</span> &middot; Approved <span id="cntApr">0</span></div>
     <div class="fld" id="viewFld">
@@ -1163,6 +1242,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   %BULLETINS%
   <div class="msg" id="msg"><b>No bulletins found.</b></div>
+  </div>
 </main>
 <button class="to-top" id="toTop" type="button" aria-label="Back to top">
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -1277,6 +1357,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       activeView = SESSION.role==='approver' ? 'appr' : 'all';
       setView(activeView);
       applySession();
+      if(URLSEC){ showList(); } else { showHome(); }
     });
   }
   // ---- forgot password ----
@@ -1373,10 +1454,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   if(adminBtn) adminBtn.addEventListener('click', openAdmin);
   var admClose=document.getElementById('admClose'); if(admClose) admClose.addEventListener('click', closeAdmin);
   // bootstrap
-  var URLSEC = (location.search.match(/[?&]sec=([a-z0-9]+)/i)||[])[1] || '';
-  if(!SESSION){ showLogin(); showPanel('login'); }
+  var URLSEC = (location.search.match(/[?&]sec=([a-z0-9]*)/i)||[])[1] || '';
+  var homeView=document.getElementById('homeView'), listWrap=document.getElementById('listWrap');
+  function showHome(){
+    if(homeView) homeView.style.display='block';
+    if(listWrap) listWrap.style.display='none';
+    document.body.classList.add('onhome');
+    document.querySelectorAll('.hv-card').forEach(function(cd){
+      var s=cd.getAttribute('data-go');
+      var cnt=bullets.filter(function(b){ return b.getAttribute('data-sec')===s; }).length;
+      var el=cd.querySelector('[data-seccnt="'+s+'"]');
+      if(el) el.textContent = cnt ? (cnt+' bulletins') : 'No data yet';
+    });
+  }
+  function showList(){
+    if(homeView) homeView.style.display='none';
+    if(listWrap) listWrap.style.display='block';
+    document.body.classList.remove('onhome');
+  }
+  if(!SESSION){ showLogin(); showPanel('login'); showHome(); }
   else { applySession(); }
-  if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); }
+  if(URLSEC){ activeSec = URLSEC.toLowerCase(); syncChips(); setView('all'); showList(); }
+  else { showHome(); }
 
   /* ---------- role helpers ---------- */
   function canSee(b){
