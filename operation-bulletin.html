@@ -507,7 +507,7 @@
      When  is filled, users/requests/approvals sync across
      every device through the Apps Script web app. If empty, the page runs
      fully offline using this browser's localStorage only. */
-  var BACKEND_URL = "";
+  var BACKEND_URL = "https://script.google.com/macros/s/AKfycbwjFGmmLWO7nzqMCp8SleOBIRXPOz9EQmtFJPQal4etuzxJ0pvwhR5dC_TFQ8QKKzuY/exec";
   var USING_BACKEND = BACKEND_URL && BACKEND_URL.indexOf("https://") === 0;
 
   function backendCall(payload, cb){
