@@ -149,9 +149,55 @@
     color:var(--muted);
     margin-top:40px;
   }
+
+  #hubBody{display:none;}
+  .who-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .who-chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:600;}
+  .head-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .head-btn:hover{background:rgba(255,255,255,.24);}
+  .login{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;background:rgba(13,29,20,.55);backdrop-filter:blur(3px);padding:16px;}
+  .login.show{display:flex;}
+  .login-card{width:100%;max-width:400px;background:#fff;border-radius:18px;padding:28px 26px;box-shadow:0 18px 50px rgba(0,0,0,.28);}
+  .login-logo{width:56px;height:56px;border-radius:15px;margin:0 auto 12px;display:grid;place-items:center;font-size:26px;background:var(--accent-dark);color:#fff;}
+  .login-card h2{text-align:center;font-size:20px;margin:0 0 2px;}
+  .login-card>p{text-align:center;color:var(--muted);font-size:12.5px;margin:4px 0;}
+  .login-f{display:grid;gap:8px;margin-top:8px;}
+  .login-f label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .login-f input,.login-f select{padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none;font-family:inherit;background:#fdfcf9;}
+  .login-f input:focus,.login-f select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,78,.14);}
+  .login-err{color:#c0392b;font-size:12px;font-weight:700;min-height:16px;}
+  .login-f button#loginBtn{padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .login-f button#loginBtn:hover{background:var(--accent-dark);}
+  .login-links{display:flex;justify-content:space-between;gap:8px;margin-top:4px;}
+  .hint-btn{background:none;border:none;color:#3b62c7;font-size:11.5px;font-weight:600;cursor:pointer;padding:4px 0;}
+  .hint-btn:hover{text-decoration:underline;}
+  .ok-msg{background:#e9f6ee;color:#1d6b3e;font-size:12px;font-weight:600;padding:9px 11px;border-radius:8px;margin-top:8px;display:none;white-space:pre-line;}
+  .ok-msg.show{display:block;}
+  .adm-wrap{position:fixed;inset:0;z-index:600;background:rgba(13,29,20,.5);display:none;align-items:center;justify-content:center;padding:16px;}
+  .adm-box{width:100%;max-width:600px;max-height:88vh;overflow:auto;background:#fff;border-radius:16px;padding:20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.3);}
+  .adm-head{display:flex;justify-content:space-between;align-items:center;}
+  .adm-head h3{margin:0;font-size:18px;}
+  .adm-head button{border:none;background:none;font-size:22px;cursor:pointer;color:var(--muted);}
+  .adm-body h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-dark);margin:18px 0 8px;}
+  .req-list,.user-list{list-style:none;margin:0;padding:0;}
+  .req-list li,.user-list li{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px;font-size:12.5px;}
+  .req-list li b,.user-list li b{display:block;}
+  .req-list .rq,.user-list code{color:var(--muted);font-size:11px;}
+  .user-list code{display:block;font-family:inherit;}
+  .rq-act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
+  .mini{border:1px solid var(--line);background:#fdfcf9;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;}
+  .mini.ok{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .mini.no{color:#b3401e;border-color:#e7c9bd;}
+  .empty{color:var(--muted);font-size:12.5px;font-style:italic;}
+  .create-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:1px dashed var(--line);border-radius:10px;padding:12px;margin-bottom:6px;}
+  .create-form input,.create-form select{padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;font-family:inherit;background:#fdfcf9;}
+  .create-form button{grid-column:1/-1;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;}
+  .create-form button:hover{background:var(--accent-dark);}
+  .adm-note{font-size:11px;color:var(--muted);background:#f4f1e8;border-radius:8px;padding:8px 10px;margin-top:14px;}
 </style>
 </head>
 <body>
+<div id="hubBody">
 <div class="header">
   <div class="header-inner">
     <div class="eyebrow">Operational Excellence — ALEL</div>
@@ -371,6 +417,56 @@
   </div>
   <p class="signature">ALEL Opex Hub · Operational Excellence, AROPEX</p>
 </div>
+</div><!-- /hubBody -->
+
+<!-- LOGIN OVERLAY -->
+<div class="login" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">&#128272;</div>
+    <h2>Welcome to ALEL Opex Hub</h2>
+    <p id="loginSub">Sign in with your office email</p>
+    <div class="login-f" id="loginForm">
+      <label for="loginId">Email / ID</label>
+      <input id="loginId" type="email" autocomplete="username" placeholder="yourname@akijlightengineering.com">
+      <label for="loginPass">Password</label>
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="Password">
+      <div class="login-err" id="loginErr"></div>
+      <button id="loginBtn" type="button">Sign In</button>
+      <div class="login-links">
+        <button class="hint-btn" id="forgotBtn" type="button">Forgot password?</button>
+        <button class="hint-btn" id="requestBtn" type="button">Request access</button>
+      </div>
+    </div>
+    <div class="login-f" id="forgotPanel" style="display:none">
+      <label for="forgotEmail">Your work email</label>
+      <input id="forgotEmail" type="email" placeholder="yourname@akijlightengineering.com">
+      <div class="login-err" id="forgotErr"></div>
+      <button id="forgotSend" type="button">Send reset request</button>
+      <button class="hint-btn" id="backLogin1" type="button">&larr; Back to login</button>
+    </div>
+    <div class="login-f" id="requestPanel" style="display:none">
+      <label for="reqName">Full name</label>
+      <input id="reqName" type="text" placeholder="Your name">
+      <label for="reqEmail">Work email</label>
+      <input id="reqEmail" type="email" placeholder="yourname@akijlightengineering.com">
+      <label for="reqSection">Floor / Area</label>
+      <select id="reqSection"><option value="">Select floor</option><option>IMM</option><option>GSS</option><option>LED</option><option>HAP</option><option>Other</option></select>
+      <div class="login-err" id="reqErr"></div>
+      <button id="reqSend" type="button">Send request</button>
+      <button class="hint-btn" id="backLogin2" type="button">&larr; Back to login</button>
+    </div>
+    <div class="ok-msg" id="loginOk"></div>
+  </div>
+</div>
+<!-- ADMIN DIALOG -->
+<div class="adm-wrap" id="adminDlg">
+  <div class="adm-box">
+    <div class="adm-head"><h3>&#128110; Admin Panel</h3><button id="admClose" type="button">&times;</button></div>
+    <div class="adm-body" id="adminBody"></div>
+  </div>
+</div>
+
+<script id="data-users" type="application/json">[{"id":"md.marufhossain@akijlightengineering.com","name":"Md. Maruf Hossain","role":"admin","section":"","hash":"240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"},{"id":"anoy@akijlightengineering.com","name":"Anoy Kumar Das","role":"prepared","section":"","hash":"65e6396b2a044e88c28fcd25ccff41545033dfa8041d72ee1fa2bb8635343ed9"},{"id":"jhumour@akijlightengineering.com","name":"Jhumour Rani","role":"checker","section":"GSS","hash":"0a7a42be4f4035e2b46ac4f7ef9eaf74f7b1d63f68541196677c225c495d6e68"},{"id":"kajal04@akijlightengineering.com","name":"Kajal Kanti","role":"checker","section":"LED","hash":"9cddec03c3a30f5dcd28153bd8a40d8e9e682b8b5daaedb7a61a8c6646bc6202"},{"id":"almamun@akijlightengineering.com","name":"Abdullah Al-Mamun","role":"checker","section":"HAP","hash":"9fefd69e5caddd83015a0acf48b7f6f6fe567e2008f4b6228b2df2b43deb1028"},{"id":"head.plant@akijlightengineering.com","name":"Md. Moshfequr Rahman","role":"approver","section":"","hash":"7fb69d64d085e299af365f6783a4f0e3c77b6fd4bf14febdb3af8ba0416f777d"}]</script>
 <script>
   let lastCard = null;
   function openCard(card){
@@ -403,6 +499,59 @@
   document.getElementById('quickOpenBtn').addEventListener('click', () => {
     if(lastCard) openCard(lastCard);
   });
+</script>
+
+
+<script>
+(function(){
+  var hubBody=document.getElementById("hubBody");
+  var USERS=JSON.parse(document.getElementById("data-users").textContent||"[]");
+  var SESSION=null;
+  try{var s=localStorage.getItem("alel_login_v1");if(s)SESSION=JSON.parse(s);}catch(e){}
+  var EXUSERS={};try{EXUSERS=JSON.parse(localStorage.getItem("alel_extra_users")||"{}");}catch(e){}
+  var REQS=[];try{REQS=JSON.parse(localStorage.getItem("alel_access_requests")||"[]");}catch(e){}
+  function allUsers(){return USERS.concat(Object.keys(EXUSERS).map(function(k){return{id:k,name:EXUSERS[k].name,role:EXUSERS[k].role,section:EXUSERS[k].section||"",hash:EXUSERS[k].hash};}));}
+  function findUser(em){em=em.toLowerCase();var ex=EXUSERS[em];if(ex)return{id:em,name:ex.name,role:ex.role,section:ex.section||"",hash:ex.hash};for(var i=0;i<USERS.length;i++){if(USERS[i].id.toLowerCase()===em)return USERS[i];}return null;}
+  function sha256Hex(str){return new Promise(function(resolve){if(window.crypto&&crypto.subtle){crypto.subtle.digest("SHA-256",new TextEncoder().encode(str)).then(function(buf){resolve(Array.from(new Uint8Array(buf)).map(function(b){return("0"+b.toString(16)).slice(-2);}).join(""));}).catch(function(){resolve(fallbackHash(str));});}else resolve(fallbackHash(str));});}
+  function fallbackHash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return("00000000"+(h>>>0).toString(16)).slice(-8);}
+  function makePass(){return"Al@"+(Math.floor(1000+Math.random()*9000));}
+  function saveReqs(){try{localStorage.setItem("alel_access_requests",JSON.stringify(REQS));}catch(e){}}
+  function saveUsers(){try{localStorage.setItem("alel_extra_users",JSON.stringify(EXUSERS));}catch(e){}}
+  var overlay=document.getElementById("loginOverlay");
+  var loginId=document.getElementById("loginId"),loginPass=document.getElementById("loginPass"),loginErr=document.getElementById("loginErr"),loginBtn=document.getElementById("loginBtn");
+  var loginForm=document.getElementById("loginForm"),loginOk=document.getElementById("loginOk"),loginSub=document.getElementById("loginSub");
+  var forgotPanel=document.getElementById("forgotPanel"),forgotEmail=document.getElementById("forgotEmail"),forgotErr=document.getElementById("forgotErr"),forgotSend=document.getElementById("forgotSend"),forgotBtn=document.getElementById("forgotBtn");
+  var requestPanel=document.getElementById("requestPanel"),reqName=document.getElementById("reqName"),reqEmail=document.getElementById("reqEmail"),reqSection=document.getElementById("reqSection"),reqErr=document.getElementById("reqErr"),reqSend=document.getElementById("reqSend"),requestBtn=document.getElementById("requestBtn");
+  var backLogin1=document.getElementById("backLogin1"),backLogin2=document.getElementById("backLogin2");
+  var whoUser=document.getElementById("whoUser"),adminBtn=document.getElementById("adminBtn"),logoutBtn=document.getElementById("logoutBtn");
+  var adminDlg=document.getElementById("adminDlg"),admClose=document.getElementById("admClose");
+  function showLogin(){overlay.classList.add("show");overlay.style.display="flex";}
+  function hideLogin(){overlay.classList.remove("show");overlay.style.display="none";}
+  function showPanel(w){loginForm.style.display=w==="login"?"grid":"none";forgotPanel.style.display=w==="forgot"?"grid":"none";requestPanel.style.display=w==="request"?"grid":"none";loginSub.textContent=w==="login"?"Sign in with your office email":w==="forgot"?"Reset your password":"Request access";loginOk.textContent="";loginOk.className="ok-msg";loginErr.textContent="";forgotErr.textContent="";reqErr.textContent="";}
+  function showOk(m){loginOk.textContent=m;loginOk.className="ok-msg show";}
+  function applySession(){if(SESSION){hideLogin();adminDlg.style.display="none";hubBody.style.display="block";whoUser.textContent=SESSION.name+(SESSION.section?" · "+SESSION.section:"")+" · "+SESSION.role.toUpperCase();logoutBtn.style.display="inline-block";adminBtn.style.display=SESSION.role==="admin"?"inline-block":"none";renderAdminBtn();}else{hubBody.style.display="none";whoUser.textContent="";logoutBtn.style.display="none";adminBtn.style.display="none";showLogin();showPanel("login");}}
+  logoutBtn.addEventListener("click",function(){SESSION=null;try{localStorage.removeItem("alel_login_v1");}catch(e){}loginPass.value="";applySession();});
+  function doLogin(){var email=(loginId.value||"").trim().toLowerCase(),pw=loginPass.value||"";if(!email||!pw){loginErr.textContent="Enter email and password";return;}sha256Hex(pw).then(function(h){var u=findUser(email);if(!u){loginErr.textContent="No account. Use “Request access”.";return;}if(u.hash!==h){loginErr.textContent="Wrong password. Use “Forgot password?”";return;}SESSION={id:u.id,name:u.name,role:u.role,section:u.section||""};try{localStorage.setItem("alel_login_v1",JSON.stringify(SESSION));}catch(e){}loginErr.textContent="";loginId.value="";loginPass.value="";applySession();});}
+  loginBtn.addEventListener("click",doLogin);
+  [loginId,loginPass].forEach(function(i){i.addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});});
+  forgotBtn.addEventListener("click",function(){showPanel("forgot");forgotEmail.focus();});
+  requestBtn.addEventListener("click",function(){showPanel("request");reqName.focus();});
+  backLogin1.addEventListener("click",function(){showPanel("login");});
+  backLogin2.addEventListener("click",function(){showPanel("login");});
+  forgotSend.addEventListener("click",function(){var em=(forgotEmail.value||"").trim().toLowerCase();if(!em){forgotErr.textContent="Enter your email";return;}if(!findUser(em)){forgotErr.textContent="No account with this email.";return;}forgotErr.textContent="";REQS.push({type:"reset",email:em,when:new Date().toLocaleString()});saveReqs();showOk("Reset request sent to the Administrator.");forgotEmail.value="";});
+  reqSend.addEventListener("click",function(){var nm=(reqName.value||"").trim(),em=(reqEmail.value||"").trim().toLowerCase(),sec=reqSection.value;if(!nm||!em){reqErr.textContent="Enter your name and email";return;}if(findUser(em)){reqErr.textContent="This email already has an account.";return;}reqErr.textContent="";REQS.push({type:"access",name:nm,email:em,section:sec||"",when:new Date().toLocaleString()});saveReqs();showOk("Access request sent to the Administrator.");reqName.value="";reqEmail.value="";reqSection.value="";});
+  function renderAdminBtn(){var p=REQS.filter(function(r){return!r.done;}).length;adminBtn.textContent=p?"Admin Panel ("+p+")":"Admin Panel";}
+  function reloadStore(){try{EXUSERS=JSON.parse(localStorage.getItem("alel_extra_users")||"{}");}catch(e){EXUSERS={};}try{REQS=JSON.parse(localStorage.getItem("alel_access_requests")||"[]");}catch(e){REQS=[];}}
+  function openAdmin(){reloadStore();var body=document.getElementById("adminBody");body.innerHTML="";var pending=REQS.filter(function(r){return!r.done;}).length;var h="<h3>Create a user (manual)</h3><div class=\"create-form\"><input id=\"cName\" placeholder=\"Full name\"><input id=\"cEmail\" type=\"email\" placeholder=\"work email\"><select id=\"cRole\"><option value=\"user\">Role \u00b7 User</option><option value=\"admin\">Role \u00b7 Admin</option></select><select id=\"cSection\"><option value=\"\">Floor \u00b7 None</option><option>IMM</option><option>GSS</option><option>LED</option><option>HAP</option><option>Other</option></select><button id=\"cCreate\" type=\"button\">Generate ID &amp; Password</button></div><h3>Pending requests ("+pending+")</h3>";if(!pending)h+="<p class=\"empty\">No pending requests.</p>";h+="<ul class=\"req-list\">";REQS.forEach(function(r,i){h+="<li data-i=\""+i+"\"><b>"+(r.name||r.email)+"</b> <span class=\"rq\">"+(r.type==="access"?("Access \u00b7 "+(r.section||"any")):"Password reset")+"</span> <span class=\"rq\">"+r.when+"</span><div class=\"rq-act\">"+(r.type==="access"?"<button class=\"mini ok\" data-act=\"grant\">Approve &amp; create account</button>":"<button class=\"mini ok\" data-act=\"grantpass\">Set new password</button>")+"<button class=\"mini no\" data-act=\"deny\">Deny</button></div></li>";});h+="</ul><h3>Users ("+allUsers().length+")</h3><ul class=\"user-list\">";allUsers().forEach(function(u){h+="<li><b>"+u.name+"</b> <span class=\"rq\">"+u.role+(u.section?" \u00b7 "+u.section:"")+"</span><code>"+u.id+"</code><div class=\"rq-act\"><button class=\"mini\" data-act=\"resetpass\" data-em=\""+u.id+"\">Reset password</button></div></li>";});h+="</ul>";body.innerHTML=h;adminDlg.style.display="flex";var cCreate=document.getElementById("cCreate");if(cCreate)cCreate.addEventListener("click",createUser);body.querySelectorAll("[data-act]").forEach(function(btn){btn.addEventListener("click",function(){var li=btn.closest("li"),idx=li?li.getAttribute("data-i"):null,em=btn.getAttribute("data-em"),act=btn.getAttribute("data-act");if(act==="grant"||act==="grantpass"){var r=REQS[idx];if(r.type==="access")grantAccess(r.email,r.name,r.section);else resetUser(r.email);r.done=true;saveReqs();reloadStore();renderAdminBtn();openAdmin();}else if(act==="deny"){var r2=REQS[idx];if(r2){REQS.splice(REQS.indexOf(r2),1);saveReqs();}reloadStore();renderAdminBtn();openAdmin();}else if(act==="resetpass"){resetUser(em);reloadStore();openAdmin();}});});}
+  function createUser(){var nm=(document.getElementById("cName").value||"").trim(),em=(document.getElementById("cEmail").value||"").trim().toLowerCase();var role=document.getElementById("cRole").value,sec=document.getElementById("cSection").value;if(!nm||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){alert("Enter a name and a valid email address.");return;}if(findUser(em)){alert("This email already has an account.");return;}var pass=makePass();sha256Hex(pass).then(function(h){EXUSERS[em]={name:nm,role:role,section:sec||"",hash:h};saveUsers();alert("Account created.\nLogin ID: "+em+"\nPassword: "+pass);openAdmin();});}
+  function grantAccess(em,nm,sec){var pass=makePass();sha256Hex(pass).then(function(h){EXUSERS[em]={name:nm||em,role:"user",section:sec||"",hash:h};saveUsers();alert("Account created for "+em+".\nLogin ID: "+em+"\nPassword: "+pass);});}
+  function resetUser(em){var u=findUser(em),pass=makePass();sha256Hex(pass).then(function(h){if(u)EXUSERS[em]={name:u.name,role:u.role,section:u.section||"",hash:h};else if(EXUSERS[em])EXUSERS[em].hash=h;saveUsers();alert("Password reset for "+em+".\nNew temporary password: "+pass);});}
+  if(adminBtn)adminBtn.addEventListener("click",openAdmin);
+  if(admClose)admClose.addEventListener("click",function(){adminDlg.style.display="none";});
+  window.addEventListener("storage",function(ev){if(ev.key==="alel_access_requests"||ev.key==="alel_extra_users"||ev.key==="alel_login_v1"){reloadStore();if(SESSION&&SESSION.role==="admin")renderAdminBtn();}});
+  setInterval(function(){if(SESSION&&SESSION.role==="admin")renderAdminBtn();},3000);
+  applySession();
+})();
 </script>
 </body>
 </html>
