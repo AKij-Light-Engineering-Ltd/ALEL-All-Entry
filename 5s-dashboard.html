@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5S Audit Dashboard — ALEL Operational Excellence</title>
+<style>
+  :root{--navy:#0b2545;--navy2:#13315c;--teal:#0e9aa7;--green:#1f8a53;--amber:#e0972a;--red:#c8402c;--bg:#eef1f6;--card:#fff;--line:#dde3ee;--text:#1a2332;--sub:#5b6779;}
+  *{box-sizing:border-box;}body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1080px;margin:0 auto;padding:14px;}
+  .bar{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .bar h1{margin:0;font-size:19px;}
+  .bar .sub{font-size:11px;opacity:.8;margin-top:2px;}
+  .bar a{color:#9fd8c6;font-size:12px;text-decoration:none;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:6px;}
+  .bar a:hover{background:rgba(255,255,255,.22);}
+  .slicer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+  .slicer input[type="date"]{border:1px solid var(--line);border-radius:6px;padding:6px;font-family:inherit;}
+  .slicer select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit;}
+  .slicer .refresh{margin-left:auto;background:var(--navy);color:#fff;border:0;border-radius:6px;padding:7px 14px;cursor:pointer;font-family:inherit;font-weight:600;}
+  .statusline{font-size:12px;color:var(--sub);margin-bottom:8px;}
+  .statusline b{color:var(--green);}
+  .score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;}
+  .score{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+  .score .lab{font-size:9px;color:var(--sub);text-transform:uppercase;font-weight:700;letter-spacing:.05em;}
+  .score .val{font-size:26px;font-weight:800;color:var(--navy);margin-top:3px;}
+  .score .val.ok{color:var(--green);}.score .val.warn{color:var(--amber);}.score .val.bad{color:var(--red);}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .phead{background:var(--navy2);color:#fff;font-size:11.5px;font-weight:700;padding:8px 14px;}
+  .pbody{padding:12px 14px;}
+  .pbody .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:640px){.pbody .g2{grid-template-columns:1fr;}}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;color:var(--sub);font-weight:600;font-size:10px;text-transform:uppercase;padding:5px 6px;border-bottom:1px solid var(--line);}
+  td{padding:6px;border-bottom:1px solid var(--line);}
+  .bar-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:11.5px;}
+  .bar-row .lab{width:120px;color:var(--sub);flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bar-track{flex:1;background:var(--bg);border-radius:4px;height:11px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .bar-row .val{width:46px;text-align:right;font-weight:700;flex:none;}
+  .nf{color:var(--amber);font-style:italic;font-size:12px;text-align:center;padding:24px 0;}
+  .error{color:var(--red);font-size:12px;text-align:center;padding:14px;}
+  .foot{background:var(--navy);color:#cbd6e6;text-align:center;font-size:11px;padding:10px;border-radius:10px;}
+  .foot b{color:#fff;}
+  .pill{display:inline-block;background:#e3f4ea;color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div>
+      <h1>5S Audit Dashboard</h1>
+      <div class="sub">Akij Light Engineering Ltd (ALEL) · Operational Excellence · Live from Google Sheet</div>
+    </div>
+    <a href="https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/" target="_blank" rel="noopener">&larr; Back to ALEL All Entry</a>
+  </div>
+
+  <div class="slicer">
+    <label>From <input type="date" id="startDate" value="2026-08-01"></label>
+    <label>To <input type="date" id="endDate" value="2026-09-30"></label>
+    <select id="areaSel"><option value="">All areas</option></select>
+    <button class="refresh" id="refreshBtn">&#8635; Refresh</button>
+  </div>
+  <div class="statusline" id="status">Loading…</div>
+
+  <div class="score-grid" id="scoreGrid"></div>
+
+  <div class="panel"><div class="phead">SCORE BY AREA / FLOOR</div><div class="pbody" id="areaBody"><div class="nf">Loading…</div></div></div>
+  <div class="panel"><div class="phead">AUDIT DETAILS</div><div class="pbody" id="auditsBody"><div class="nf">Loading…</div></div></div>
+  <div class="panel"><div class="phead">CATEGORY BREAKDOWN (SORT → SUSTAIN)</div><div class="pbody" id="catBody"><div class="nf">Loading…</div></div></div>
+
+  <div class="foot">5S — Sort, Set in Order, Shine, Standardize, Sustain · <b>ALEL Operational Excellence</b></div>
+</div>
+
+<script>
+const SHEET_ID='1iVlAdl9bcmZE1Uk_24z7NUl4FtivFTa2h7wOI1T8T0w';
+const GID='1035222766';
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function parseCSV(text){
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(cur); cur=''; }
+    else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if(ch==='\r'){}
+    else cur+=ch;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+
+async function load(){
+  const status=document.getElementById('status');
+  try{
+    status.innerHTML='Loading live data from Google Sheet…';
+    const url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+GID;
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const txt=await res.text();
+    const rows=parseCSV(txt);
+    if(rows.length<3) throw new Error('No audit data found yet');
+    // header row 0, skip "Manual entry." row(s), map audits
+    const head=rows[0].map(h=>h.trim());
+    const audits=[];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const date=r[head.indexOf('Audit Date')];
+      if(!date||/manual/i.test(date)||!head.includes('Audit Date')) continue;
+      const o={};
+      head.forEach((h,idx)=>o[h]=r[idx]!==undefined?r[idx].trim():'');
+      if(!o['Score %']) continue;
+      o.auditDate=o['Audit Date'];
+      audits.push(o);
+    }
+    render(audits);
+  }catch(e){
+    status.innerHTML='';
+    document.getElementById('scoreGrid').innerHTML='';
+    document.getElementById('areaBody').innerHTML='<div class="error">Could not load data: '+e.message+'</div>';
+    document.getElementById('auditsBody').innerHTML='';
+  }
+}
+
+function n(x){const v=parseFloat(x);return isNaN(v)?0:v;}
+function asDate(s){const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s);}
+function inR(d,s,e){return d>=s&&d<=e;}
+
+function render(all){
+  const sd=new Date(document.getElementById('startDate').value), ed=new Date(document.getElementById('endDate').value);
+  let list=all.filter(a=>{const d=asDate(a.auditDate);return d&&inR(d,sd,ed);});
+  const areaSel=document.getElementById('areaSel');
+  const areaSelV=areaSel.value;
+  if(areaSelV) list=list.filter(a=>a['Floor / Area']===areaSelV);
+
+  const areas={};let totPct=0;
+  const recent=[];
+  list.forEach(a=>{
+    const p=n(a['Score %']);
+    totPct+=p;
+    const key=a['Floor / Area']||'General';
+    if(!areas[key])areas[key]={area:key,sum:0,n:0,last:0,lastDate:''};
+    areas[key].sum+=p;areas[key].n++;
+    if(asDate(a.auditDate)>=asDate(areas[key].lastDate||'2000-01-01')){
+      areas[key].last=p; areas[key].lastDate=a.auditDate;
+      areas[key].auditor=a['Auditor Name']||'';
+    }
+    recent.push({d:asDate(a.auditDate),date:a.auditDate,area:key,auditor:a['Auditor Name']||'',score:p,email:a['Email']||'',shift:a['Shift']||''});
+  });
+  recent.sort((a,b)=>b.d-a.d);
+  const count=list.length;
+  const overall=count?Math.round(totPct/count*10)/10:0;
+  const good=Object.values(areas).filter(a=>a.last>=85).length;
+
+  document.getElementById('status').innerHTML = count? '<b>'+count+'</b> audits · Overall <b>'+overall+'%</b> · Last updated live' : 'No audits in selected range';
+  // fill area dropdown
+  const dd=document.getElementById('areaSel');
+  if(dd.options.length<=1){ Object.keys(areas).sort().forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;dd.appendChild(o);}); dd.value=areaSelV||''; }
+
+  function cls(p){return p>=85?'ok':p>=60?'warn':'bad';}
+  document.getElementById('scoreGrid').innerHTML=
+    '<div class="score"><div class="lab">Overall</div><div class="val '+cls(overall)+'">'+overall+'%</div></div>'+
+    '<div class="score"><div class="lab">Audits</div><div class="val">'+count+'</div></div>'+
+    '<div class="score"><div class="lab">Areas</div><div class="val">'+Object.keys(areas).length+'</div></div>'+
+    '<div class="score"><div class="lab">≥85% Areas</div><div class="val '+cls(good?100:0)+'">'+good+'</div></div>';
+
+  let areaHtml='';Object.keys(areas).sort().forEach(k=>{
+    const a=areas[k]; const avg=Math.round(a.sum/a.n*10)/10;
+    areaHtml+='<div class="bar-row"><div class="lab">'+a.area+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.min(avg,100)+'%;background:'+(avg>=85?'var(--green)':avg>=60?'var(--teal)':'var(--amber)')+'"></div></div><div class="val">'+avg+'%</div></div>';
+  });
+  areaHtml+='<div style="font-size:10px;color:var(--sub);margin-top:4px">Latest: '+Object.values(areas).map(a=>a.area+' '+a.last+'% ('+(a.auditor||'')+')').join(' · ')+'</div>';
+  document.getElementById('areaBody').innerHTML=list.length?areaHtml:'<div class="nf">No audits in selected range</div>';
+
+  let tab='<table><tr><th>Date</th><th>Area</th><th>Auditor</th><th>Score</th><th>Status</th></tr>';
+  recent.slice(0,15).forEach(a=>{
+    tab+='<tr><td>'+a.date.slice(0,10)+'</td><td>'+a.area+'</td><td style="font-size:11px">'+a.auditor+'</td><td><b>'+a.score+'%</b></td><td><span class="pill" style="background:'+(a.score>=85?'#e3f4ea;color:var(--green)':a.score>=60?'#fdeee0;color:var(--amber)':'#fbe4e1;color:var(--red)')+'">'+(a.score>=85?'Good':a.score>=60?'Average':'Needs work')+'</span></td></tr>';
+  });
+  tab+='</table>';
+  document.getElementById('auditsBody').innerHTML=tab;
+
+  // category breakdown: average per pillar (Sort..Sustain) from the latest audit
+  const groups={'1.':'Sort (S1)','2.':'Set in Order (S2)','3.':'Shine (S3)','4.':'Standardize (S4)','5.':'Sustain (S5)'};
+  let lastAudit = recent[0];
+  let catHtml2='<table><tr><th>Pillar</th><th style="text-align:right">Score %</th></tr>';
+  Object.keys(groups).forEach(prefix=>{
+    let total=0,cnt=0;
+    if(lastAudit){ Object.keys(lastAudit).forEach(h=>{ if(h.startsWith(prefix)&&!/Remarks/.test(h)){const v=n(lastAudit[h]);if(v){total+=v;cnt++;}} }); }
+    const p=cnt?Math.round(total/cnt/2.4*100):0;
+    catHtml2+='<tr><td>'+groups[prefix]+'</td><td style="text-align:right">'+(cnt?p+'%':'—')+'</td></tr>';
+  });
+  catHtml2+='</table><div style="font-size:10px;color:var(--sub)">Pillar % = avg question score ÷ max 2.4 · from latest audit ('+(lastAudit?lastAudit.date.slice(0,10):'n/a')+')</div>';
+  document.getElementById('catBody').innerHTML=catHtml2;
+}
+
+document.getElementById('refreshBtn').addEventListener('click',load);
+document.getElementById('startDate').addEventListener('change',load);
+document.getElementById('endDate').addEventListener('change',load);
+document.getElementById('areaSel').addEventListener('change',load);
+load();
+setInterval(load,300000);
+</script>
+</body></html>
