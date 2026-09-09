@@ -168,22 +168,26 @@ function ensureSheets_() {
 /**
  * Must be run once in the editor to create the Users / Requests sheets.
  * Run after authorizing the script (Run button) — then deploy.
+ * Idempotent: adds any missing seed user; never overwrites existing users.
+ * All seed passwords are: ALEL@2026  (change them from the hub Admin panel).
  */
 function initSheets() {
   ensureSheets_();
   var users = readUsers();
-  if (!users.length) {
-    // Seed the default admin (password: ALEL@2026). Change after first login.
-    users.push({
-      id:      "md.marufhossain@akijlightengineering.com",
-      name:    "Md. Maruf Hossain",
-      role:    "admin",
-      section: "",
-      hash:    "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" // ALEL@2026
-    });
-    writeUsers(users);
-  }
-  return "Sheets initialised (" + users.length + " user(s))";
+  var SEED = [
+    { id: "md.marufhossain@akijlightengineering.com", name: "Md. Maruf Hossain",     role: "admin",    section: "",   hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" },
+    { id: "anoy@akijlightengineering.com",            name: "Anoy Kumar Das",        role: "prepared", section: "",   hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" },
+    { id: "jhumour@akijlightengineering.com",          name: "Jhumour Rani",          role: "checker",  section: "GSS", hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" },
+    { id: "kajal04@akijlightengineering.com",          name: "Kajal Kanti",           role: "checker",  section: "LED", hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" },
+    { id: "almamun@akijlightengineering.com",          name: "Abdullah Al-Mamun",     role: "checker",  section: "HAP", hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" },
+    { id: "head.plant@akijlightengineering.com",       name: "Md. Moshfequr Rahman",  role: "approver", section: "",   hash: "18e005af46f178e2ff6083db381ef31888176f834c02c0470bdb8fbdbf2a4ece" }
+  ];
+  var missing = SEED.filter(function (s) {
+    return !users.some(function (u) { return u.id === s.id; });
+  });
+  users = users.concat(missing);
+  writeUsers(users);
+  return "Sheets initialised (" + users.length + " user(s), +" + missing.length + " added)";
 }
 
 function readUsers() {
