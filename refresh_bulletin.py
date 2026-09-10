@@ -27,7 +27,7 @@ OUT_HOME = os.path.join(HERE, "ob-home.html")
 HOME_URL = "operation-bulletin.html"   # relative link used by the topbar logo (goes to home view of this file)
 
 # Google Apps Script backend web-app URL (deploy Code.gs). Leave "" for offline/localStorage only.
-BACKEND_URL = ""
+BACKEND_URL = "https://script.google.com/macros/s/AKfycbwjFGmmLWO7nzqMCp8SleOBIRXPOz9EQmtFJPQal4etuzxJ0pvwhR5dC_TFQ8QKKzuY/exec"
 
 MAX_SIDE = 520  # px for embedded product images
 
@@ -45,12 +45,12 @@ STORE_KEY = "alel_approvals_v1"
 # role: admin | prepared | checker | approver
 # section (for checker): GSS | LED | HAP
 USERS = [
-    {"id": "md.marufhossain@akijlightengineering.com", "name": "Md. Maruf Hossain",        "role": "admin",     "section": "", "pass": "admin123"},
-    {"id": "anoy@akijlightengineering.com",             "name": "Anoy Kumar Das",          "role": "prepared",  "section": "", "pass": "anoy2233"},
-    {"id": "jhumour@akijlightengineering.com",          "name": "Jhumour Rani",            "role": "checker",   "section": "GSS", "pass": "gss123"},
-    {"id": "kajal04@akijlightengineering.com",          "name": "Kajal Kanti",             "role": "checker",   "section": "LED", "pass": "led123"},
-    {"id": "almamun@akijlightengineering.com",          "name": "Abdullah Al-Mamun",       "role": "checker",   "section": "HAP", "pass": "hap123"},
-    {"id": "head.plant@akijlightengineering.com",       "name": "Md. Moshfequr Rahman",    "role": "approver",  "section": "", "pass": "head123"},
+    {"id": "md.marufhossain@akijlightengineering.com", "name": "Md. Maruf Hossain",        "role": "admin",     "section": "", "pass": "ALEL@2026"},
+    {"id": "anoy@akijlightengineering.com",             "name": "Anoy Kumar Das",          "role": "prepared",  "section": "", "pass": "ALEL@2026"},
+    {"id": "jhumour@akijlightengineering.com",          "name": "Jhumour Rani",            "role": "checker",   "section": "GSS", "pass": "ALEL@2026"},
+    {"id": "kajal04@akijlightengineering.com",          "name": "Kajal Kanti",             "role": "checker",   "section": "LED", "pass": "ALEL@2026"},
+    {"id": "almamun@akijlightengineering.com",          "name": "Abdullah Al-Mamun",       "role": "checker",   "section": "HAP", "pass": "ALEL@2026"},
+    {"id": "head.plant@akijlightengineering.com",       "name": "Md. Moshfequr Rahman",    "role": "approver",  "section": "", "pass": "ALEL@2026"},
 ]
 USER_SESSION_KEY = "alel_login_v1"
 # Prepared signers (displayed list)
