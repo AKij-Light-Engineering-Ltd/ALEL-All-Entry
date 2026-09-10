@@ -194,23 +194,175 @@
   .create-form button{grid-column:1/-1;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;}
   .create-form button:hover{background:var(--accent-dark);}
   .adm-note{font-size:11px;color:var(--muted);background:#f4f1e8;border-radius:8px;padding:8px 10px;margin-top:14px;}
+
+  /* ══════════ HUB v2: LOADER / STICKY HEADER / ANIMATIONS ══════════ */
+  html{scroll-behavior:smooth;}
+  body{
+    background-color:var(--paper);
+    background-image:radial-gradient(circle,rgba(47,111,78,.07) 1px,transparent 1px);
+    background-size:26px 26px;
+    animation:gridDrift 10s linear infinite;
+  }
+  @keyframes gridDrift{0%{background-position:0 0;}100%{background-position:26px 26px;}}
+  ::-webkit-scrollbar{width:7px;height:7px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#c3cdb8;border-radius:10px;}
+  ::-webkit-scrollbar-thumb:hover{background:#4a9a74;}
+
+  /* ---- Loader ---- */
+  @keyframes loaderSpin{to{transform:rotate(360deg);}}
+  @keyframes loaderSpinRev{to{transform:rotate(-360deg);}}
+  @keyframes loaderPulseGlow{0%,100%{opacity:.15;transform:scale(1);}50%{opacity:.35;transform:scale(1.18);}}
+  @keyframes loaderBarGrow{0%{transform:scaleY(.15);opacity:.4;}50%{transform:scaleY(1);opacity:1;}100%{transform:scaleY(.15);opacity:.4;}}
+  @keyframes loaderSweep{0%{width:0%;opacity:1;}85%{width:92%;opacity:1;}100%{width:92%;opacity:.6;}}
+  @keyframes loaderFadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes loaderFloat{0%,100%{transform:translateY(0) rotate(0deg);opacity:.5;}33%{transform:translateY(-14px) rotate(120deg);opacity:1;}66%{transform:translateY(8px) rotate(240deg);opacity:.35;}}
+  @keyframes loaderOrbit{from{transform:rotate(0deg) translateX(52px) rotate(0deg);}to{transform:rotate(360deg) translateX(52px) rotate(-360deg);}}
+  @keyframes loaderOrbitRev{from{transform:rotate(0deg) translateX(38px) rotate(0deg);}to{transform:rotate(-360deg) translateX(38px) rotate(360deg);}}
+  @keyframes loaderScanline{0%{top:-4px;opacity:0;}10%{opacity:.6;}90%{opacity:.6;}100%{top:100%;opacity:0;}}
+  @keyframes loaderShimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+  #loading-overlay{
+    position:fixed;inset:0;z-index:9999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    overflow:hidden;
+    background:linear-gradient(135deg,#0a1c12 0%,#143826 50%,#0c2417 100%);
+  }
+  #loading-overlay.fade-out{opacity:0;pointer-events:none;transition:opacity .7s ease;}
+  .ld-title{
+    font-size:1.15rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;
+    background:linear-gradient(90deg,#fff 0%,#c9ecd9 50%,#6fcf9f 100%);
+    background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    animation:loaderFadeUp .8s ease both .1s,gradientShift 5s linear infinite .1s;
+  }
+  #loader-status{
+    font-size:.7rem;color:#7aa88f;margin-top:6px;font-weight:600;
+    letter-spacing:.15em;text-transform:uppercase;
+    animation:loaderFadeUp .8s ease both .25s;
+  }
+  .loader-bar{width:220px;height:3px;background:#1c3a29;border-radius:99px;margin-top:20px;overflow:hidden;border:1px solid #2f5c42;animation:loaderFadeUp .8s ease both .35s;}
+  .loader-bar>div{height:100%;border-radius:99px;background:linear-gradient(90deg,#2f6f4e,#4a9a74,#7dcf9f,#6fcf9f);background-size:200% 100%;animation:loaderSweep 2.2s cubic-bezier(.4,0,.2,1) forwards .5s,loaderShimmer 2s linear infinite .5s;}
+
+  /* ---- Sticky header + live clock ---- */
+  .header{position:sticky;top:0;z-index:300;padding:14px 16px 16px;box-shadow:0 6px 22px rgba(14,40,27,.28);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:2px;}
+  .who-bar{margin-bottom:0;}
+  .clockbox{display:flex;align-items:center;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:#cdebd9;text-transform:uppercase;font-variant-numeric:tabular-nums;}
+  .clock-tick{animation:clockTick 1s step-end infinite;color:#9be3bd;}
+  @keyframes clockTick{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+  #refreshBtn:active{transform:scale(.94);}
+  #refreshBtn svg{transition:transform .4s;}
+  #refreshBtn:active svg{transform:rotate(360deg);}
+
+  /* ---- Animated headings + dividers ---- */
+  @keyframes gradientShift{0%{background-position:0% center;}100%{background-position:200% center;}}
+  .grad-title-light{background:linear-gradient(90deg,#fff 0%,#cdebd9 45%,#a5e3c2 70%,#fff 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:gradientShift 5s linear infinite;}
+  .gradient-title{background:linear-gradient(90deg,#204f38 0%,#2f6f4e 40%,#57a07a 70%,#204f38 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:gradientShift 4s linear infinite;}
+  .grad-divider{height:1px;border:none;background:linear-gradient(90deg,transparent,#2f6f4e 30%,#57a07a 50%,#8cc9a5 70%,transparent);background-size:200% auto;animation:gradientShift 3s linear infinite;opacity:.45;margin:30px auto;}
+
+  /* ---- Card FX ---- */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .entry-card{
+    position:relative;overflow:hidden;
+    animation:fadeUp .6s cubic-bezier(.4,0,.2,1) both;
+    transition:transform .35s cubic-bezier(.4,0,.2,1),box-shadow .35s cubic-bezier(.4,0,.2,1),border-color .35s;
+    will-change:transform;
+  }
+  #cardGrid .entry-card:nth-child(1){animation-delay:.05s;}
+  #cardGrid .entry-card:nth-child(2){animation-delay:.10s;}
+  #cardGrid .entry-card:nth-child(3){animation-delay:.15s;}
+  #cardGrid .entry-card:nth-child(4){animation-delay:.20s;}
+  #cardGrid .entry-card:nth-child(5){animation-delay:.25s;}
+  #cardGrid .entry-card:nth-child(6){animation-delay:.30s;}
+  #cardGrid .entry-card:nth-child(7){animation-delay:.35s;}
+  #cardGrid .entry-card:nth-child(8){animation-delay:.40s;}
+  #cardGrid .entry-card:nth-child(9){animation-delay:.45s;}
+  #cardGrid .entry-card:nth-child(10){animation-delay:.50s;}
+  #cardGrid .entry-card:nth-child(11){animation-delay:.55s;}
+  .entry-card:hover{transform:translateY(-4px);box-shadow:0 18px 32px -12px rgba(32,79,56,.34),0 0 0 1px rgba(47,111,78,.28);border-color:#b8d4c2;}
+  .entry-card::after{
+    content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+    background:linear-gradient(105deg,transparent 40%,rgba(32,79,56,.06) 50%,transparent 60%);
+    background-size:200% 100%;background-position:200% 0;transition:background-position .55s ease;
+  }
+  .entry-card:hover::after{background-position:-100% 0;}
+  .card-top-bar{position:absolute;top:0;left:0;width:100%;height:3px;background-size:200% auto;animation:gradientShift 2.2s linear infinite paused;}
+  .entry-card:hover .card-top-bar{animation-play-state:running;}
+  .card-blob{position:absolute;width:120px;height:120px;border-radius:50%;filter:blur(44px);pointer-events:none;opacity:0;bottom:-38px;right:-30px;transition:opacity .5s ease,transform .5s ease;}
+  .entry-card:hover .card-blob{opacity:.17;transform:scale(1.25);}
 </style>
 </head>
 <body>
+<!-- ══════════ CINEMATIC LOADING OVERLAY ══════════ -->
+<div id="loading-overlay">
+  <div id="loader-particles" style="position:absolute;inset:0;pointer-events:none;"></div>
+  <div style="position:absolute;width:520px;height:520px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(47,111,78,.20) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:loaderPulseGlow 3s ease-in-out infinite;"></div>
+  <div style="position:absolute;width:280px;height:280px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(125,207,159,.13) 0%,transparent 70%);top:28%;left:26%;animation:loaderPulseGlow 4s ease-in-out infinite 1s;"></div>
+  <div style="position:absolute;left:0;right:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(125,207,159,.55),transparent);animation:loaderScanline 2.8s ease-in-out infinite;"></div>
+
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;width:140px;height:140px;margin-bottom:26px;">
+    <svg viewBox="0 0 140 140" fill="none" style="position:absolute;inset:0;width:100%;height:100%;animation:loaderSpin 4s linear infinite;">
+      <circle cx="70" cy="70" r="64" stroke="#1c3a29" stroke-width="2"/>
+      <circle cx="70" cy="70" r="64" stroke="url(#lg1)" stroke-width="3" stroke-linecap="round" stroke-dasharray="80 323"/>
+      <defs><linearGradient id="lg1" x1="0" y1="0" x2="140" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#4a9a74"/><stop offset="100%" stop-color="#7dcf9f"/></linearGradient></defs>
+    </svg>
+    <svg viewBox="0 0 110 110" fill="none" style="position:absolute;width:110px;height:110px;top:15px;left:15px;animation:loaderSpinRev 2.6s linear infinite;">
+      <circle cx="55" cy="55" r="50" stroke="#1c3a29" stroke-width="1.5"/>
+      <circle cx="55" cy="55" r="50" stroke="url(#lg2)" stroke-width="2" stroke-linecap="round" stroke-dasharray="40 274" opacity=".8"/>
+      <defs><linearGradient id="lg2" x1="0" y1="0" x2="110" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#fde68a"/></linearGradient></defs>
+    </svg>
+    <svg viewBox="0 0 80 80" fill="none" style="position:absolute;width:80px;height:80px;top:30px;left:30px;animation:loaderSpin 1.5s linear infinite;">
+      <circle cx="40" cy="40" r="35" stroke="#1c3a29" stroke-width="1.5"/>
+      <circle cx="40" cy="40" r="35" stroke="#6fcf9f" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="12 208" opacity=".7"/>
+    </svg>
+    <div style="position:absolute;width:10px;height:10px;top:calc(50% - 5px);left:calc(50% - 5px);animation:loaderOrbit 4s linear infinite;">
+      <div style="width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,#4a9a74,#2f6f4e);box-shadow:0 0 8px 3px rgba(74,154,116,.7);"></div>
+    </div>
+    <div style="position:absolute;width:7px;height:7px;top:calc(50% - 3.5px);left:calc(50% - 3.5px);animation:loaderOrbitRev 2.6s linear infinite;">
+      <div style="width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#fbbf24,#b45309);box-shadow:0 0 6px 2px rgba(251,191,36,.7);"></div>
+    </div>
+    <div style="position:relative;z-index:10;width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#1c3a29,#0c2417);border:1px solid rgba(125,207,159,.4);box-shadow:0 0 22px rgba(47,111,78,.35),inset 0 1px 0 rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      <div style="position:absolute;left:0;right:0;height:1px;background:rgba(125,207,159,.25);animation:loaderScanline 2s ease-in-out infinite .5s;"></div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:22px;padding:0 2px;">
+        <div style="width:5px;background:linear-gradient(to top,#4a9a74,#7dcf9f);border-radius:2px 2px 0 0;transform-origin:bottom;animation:loaderBarGrow 1.2s ease-in-out infinite 0ms;"></div>
+        <div style="width:5px;background:linear-gradient(to top,#edb94c,#fde68a);border-radius:2px 2px 0 0;transform-origin:bottom;animation:loaderBarGrow 1.2s ease-in-out infinite 200ms;"></div>
+        <div style="width:5px;background:linear-gradient(to top,#2f6f4e,#4a9a74);border-radius:2px 2px 0 0;transform-origin:bottom;animation:loaderBarGrow 1.2s ease-in-out infinite 400ms;"></div>
+        <div style="width:5px;background:linear-gradient(to top,#7dcf9f,#b9e4ca);border-radius:2px 2px 0 0;transform-origin:bottom;animation:loaderBarGrow 1.2s ease-in-out infinite 600ms;"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="ld-title">ALEL Opex Hub</p>
+  <p id="loader-status">Starting session…</p>
+  <div class="loader-bar"><div></div></div>
+
+  <div style="position:absolute;top:12%;left:8%;width:5px;height:5px;border-radius:50%;background:#4a9a74;opacity:.5;animation:loaderFloat 3.5s ease-in-out infinite 0s;"></div>
+  <div style="position:absolute;top:18%;right:10%;width:4px;height:4px;border-radius:50%;background:#7dcf9f;opacity:.4;animation:loaderFloat 4s ease-in-out infinite .8s;"></div>
+  <div style="position:absolute;bottom:20%;left:12%;width:3px;height:3px;border-radius:50%;background:#fbbf24;opacity:.4;animation:loaderFloat 3s ease-in-out infinite 1.4s;"></div>
+  <div style="position:absolute;bottom:15%;right:8%;width:5px;height:5px;border-radius:50%;background:#b9e4ca;opacity:.5;animation:loaderFloat 4.5s ease-in-out infinite .3s;"></div>
+  <div style="position:absolute;top:40%;left:4%;width:3px;height:3px;border-radius:50%;background:#4a9a74;opacity:.3;animation:loaderFloat 5s ease-in-out infinite 2s;"></div>
+  <div style="position:absolute;top:55%;right:5%;width:4px;height:4px;border-radius:50%;background:#7dcf9f;opacity:.3;animation:loaderFloat 3.8s ease-in-out infinite 1s;"></div>
+</div>
 <div id="hubBody">
 <div class="header">
   <div class="header-inner">
-    <div class="who-bar">
-      <span class="who-chip" id="whoUser"></span>
-      <button class="head-btn" id="adminBtn" type="button" style="display:none">Admin Panel</button>
-      <button class="head-btn out" id="logoutBtn" type="button" style="display:none">Logout</button>
-    </div>    <div class="eyebrow">Operational Excellence — ALEL</div>
-    <h1>ALEL Opex Hub</h1>
+    <div class="topbar">
+      <div class="clockbox">
+        <span id="currentDate">-- ---- ----</span><span class="clock-tick">&nbsp;|&nbsp;</span><span id="liveClock">--:--:--</span>
+      </div>
+      <div class="who-bar">
+        <span class="who-chip" id="whoUser"></span>
+        <button class="head-btn" id="adminBtn" type="button" style="display:none">Admin Panel</button>
+        <button class="head-btn out" id="logoutBtn" type="button" style="display:none">Logout</button>
+        <button class="head-btn" id="refreshBtn" type="button" title="Reload data &amp; re-check session">&#8635;&nbsp; Refresh</button>
+      </div>
+    </div>
+    <div class="eyebrow">Operational Excellence — ALEL</div>
+    <h1 class="grad-title-light">ALEL Opex Hub</h1>
     <p>One hub for all ALEL (IMM / GSS / LED / HAP) daily operations — 5S audit, OEE, SMV, bulletins and more.</p>
   </div>
 </div>
 <div class="wrap">
-  <div class="section-label">Tools &amp; Forms</div>
+  <div class="section-label gradient-title">Tools &amp; Forms</div>
   <div class="section-sub">Choose an option below to open a tool or form in a new tab.</div>
   <div class="grid" id="cardGrid">
     <!-- Operation Bulletin -->
@@ -415,10 +567,12 @@
       </div>
     </div>
   </div>
+  <hr class="grad-divider">
   <div class="quick-open-row">
     <button class="quick-open-btn" id="quickOpenBtn" disabled>Quick Open — Select a Tool</button>
     <p class="quick-open-note">Use the options above to open any ALEL tool or form.</p>
   </div>
+  <hr class="grad-divider">
   <p class="signature">ALEL Opex Hub · Operational Excellence, AROPEX</p>
 </div>
 </div><!-- /hubBody -->
@@ -571,6 +725,58 @@
   setInterval(function(){if(SESSION&&SESSION.role==="admin")renderAdminBtn();},3000);
   pullServer();
   applySession();
+})();
+</script>
+
+<script>
+(function(){
+  /* ───── Cinematic loader ───── */
+  var ov=document.getElementById('loading-overlay');
+  var pc=document.getElementById('loader-particles');
+  var colors=['#4a9a74','#7dcf9f','#fbbf24','#2f6f4e','#b9e4ca'];
+  for(var i=0;i<24;i++){
+    var d=document.createElement('div');
+    var size=Math.random()*2.5+1;
+    d.style.cssText='position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;background:'+colors[Math.floor(Math.random()*colors.length)]+';opacity:'+(Math.random()*.4+.1)+';left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;animation:loaderFloat '+(3+Math.random()*4)+'s ease-in-out infinite '+(Math.random()*4)+'s;';
+    pc.appendChild(d);
+  }
+  var msgs=['Starting session…','Building tools & shortcuts…','Connecting to shared login…','Reading access permissions…','Almost ready…'];
+  var idx=0,el=document.getElementById('loader-status');
+  var iv=setInterval(function(){
+    idx=(idx+1)%msgs.length;
+    el.style.opacity='0';
+    setTimeout(function(){el.textContent=msgs[idx];el.style.transition='opacity .4s';el.style.opacity='1';},200);
+  },1300);
+  function done(){clearInterval(iv);ov.classList.add('fade-out');setTimeout(function(){if(ov.parentNode)ov.parentNode.removeChild(ov);},750);}
+  setTimeout(done,2100);      /* minimum splash time */
+  setTimeout(done,15000);     /* safety net */
+
+  /* ───── Live date + clock + refresh ───── */
+  var dEl=document.getElementById('currentDate'),cEl=document.getElementById('liveClock');
+  var M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function tick(){
+    var d=new Date();
+    dEl.textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
+    var h=d.getHours(),m=d.getMinutes(),s=d.getSeconds();
+    cEl.textContent=(h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+  tick();
+  setInterval(tick,1000);
+  var rb=document.getElementById('refreshBtn');
+  if(rb)rb.addEventListener('click',function(){location.reload();});
+
+  /* ───── Per-card FX: top accent bar + glow blob coloured by badge ───── */
+  document.querySelectorAll('.entry-card').forEach(function(card){
+    var badge=card.querySelector('.badge');
+    var col='#2f6f4e';
+    var st=badge?badge.getAttribute('style')||'':'';var m=st.match(/background\s*:\s*(#[0-9a-fA-F]{3,6})/);
+    if(m)col=m[1];
+    var tb=document.createElement('div');tb.className='card-top-bar';
+    tb.style.background='linear-gradient(90deg,'+col+' 0%,#ffffff 50%,'+col+' 100%)';
+    tb.style.backgroundSize='200% auto';
+    var blob=document.createElement('div');blob.className='card-blob';blob.style.background=col;
+    card.appendChild(tb);card.appendChild(blob);
+  });
 })();
 </script>
 </body>
