@@ -10,6 +10,7 @@
  *   - upsert        -> create / update a user (admin action)
  *   - resetpass     -> set a user's password hash (admin action)
  *   - removeRequest -> remove a request from the queue (admin action)
+ *   - deluser       -> permanently remove a user by email (admin action)
  *
  * Deploy steps (one-time, done by the administrator):
  *   1. Create a new Google Sheet (leave it open / shared, this is the data store).
@@ -71,6 +72,7 @@ function handle(p) {
     case "upsert":        return doUpsert(p);
     case "resetpass":     return doResetPass(p);
     case "removeRequest": return doRemoveRequest(p);
+    case "deluser":       return doDelUser(p);
     default:
       return { ok: false, error: "Unknown action: " + action };
   }
@@ -149,6 +151,15 @@ function doRemoveRequest(p) {
   var reqs = readRequests().filter(function (r) { return r.email !== email; });
   writeRequests(reqs);
   return { ok: true };
+}
+
+/** Admin: permanently remove a user by email. */
+function doDelUser(p) {
+  var email = String(p.email || "").trim().toLowerCase();
+  if (!email) return { ok: false, error: "No email" };
+  var users = readUsers().filter(function (u) { return u.id !== email; });
+  writeUsers(users);
+  return { ok: true, removed: email, remaining: users.length };
 }
 
 // ---------------------------------------------------------------------------
