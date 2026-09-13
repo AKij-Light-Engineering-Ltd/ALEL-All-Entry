@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALEL Opex Hub — Operational Excellence</title>
+<meta name="theme-color" content="#2f6f4e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ALEL OPEX">
+<meta name="application-name" content="ALEL OPEX">
 <style>
   :root{
     --ink:#1c2521;
@@ -777,6 +786,21 @@
     var blob=document.createElement('div');blob.className='card-blob';blob.style.background=col;
     card.appendChild(tb);card.appendChild(blob);
   });
+})();
+</script>
+<button id="installApp" style="display:none;position:fixed;right:16px;bottom:16px;z-index:400;background:#2f6f4e;color:#fff;border:0;border-radius:999px;padding:12px 18px;font-weight:700;font-size:14px;box-shadow:0 10px 26px rgba(32,79,56,.45);cursor:pointer;font-family:inherit;">&#8681; Install App</button>
+<script>
+(function(){
+  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+  var deferred=null, btn=document.getElementById('installApp');
+  window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); deferred=e; if(btn) btn.style.display='block'; });
+  if(btn) btn.addEventListener('click',function(){
+    if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred=null; btn.style.display='none'; }); return; }
+    alert('To install the app:\n\n\u2022 Android (Chrome): tap the \u22ee menu \u2192 "Install app" / "Add to Home screen"\n\u2022 iPhone (Safari): tap Share \u2191 \u2192 "Add to Home Screen"');
+  });
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var standalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+  if(isIOS && !standalone && btn){ btn.style.display='block'; }
 })();
 </script>
 </body>
