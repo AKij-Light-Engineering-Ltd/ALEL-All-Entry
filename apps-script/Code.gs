@@ -32,6 +32,7 @@
 // if you customise initSheets().
 var USERS_SHEET    = "Users";
 var REQUESTS_SHEET = "Requests";
+var REMARKS_SHEET  = "Remarks";
 var PROP_USERS     = "ALEL_USERS";
 var PROP_REQS      = "ALEL_REQUESTS";
 
@@ -73,6 +74,7 @@ function handle(p) {
     case "resetpass":     return doResetPass(p);
     case "removeRequest": return doRemoveRequest(p);
     case "deluser":       return doDelUser(p);
+    case "remark":        return doRemark(p);
     default:
       return { ok: false, error: "Unknown action: " + action };
   }
@@ -83,7 +85,21 @@ function handle(p) {
 // ---------------------------------------------------------------------------
 
 function doList() {
-  return { ok: true, users: readUsers(), requests: readRequests(), approvals: [] };
+  return { ok: true, users: readUsers(), requests: readRequests(), approvals: [], remarks: readRemarks() };
+}
+
+/** Save (or update) the remarks for one bulletin, keyed by its item code. */
+function doRemark(p) {
+  var code = String(p.code || "").trim();
+  if (!code) return { ok: false, error: "No code" };
+  var text = String(p.text || "");
+  var by   = String(p.by || "");
+  var role = String(p.role || "");
+  var at   = String(p.at || new Date().toLocaleString());
+  var rows = readRemarks().filter(function (r) { return r.code !== code; });
+  rows.push({ code: code, text: text, by: by, role: role, at: at });
+  writeRemarks(rows);
+  return { ok: true };
 }
 
 function doRequest(p) {
@@ -174,6 +190,7 @@ function ensureSheets_() {
   var ss = ss_();
   if (!ss.getSheetByName(USERS_SHEET)) ss.insertSheet(USERS_SHEET);
   if (!ss.getSheetByName(REQUESTS_SHEET)) ss.insertSheet(REQUESTS_SHEET);
+  if (!ss.getSheetByName(REMARKS_SHEET)) ss.insertSheet(REMARKS_SHEET);
 }
 
 /**
@@ -245,6 +262,29 @@ function writeRequests(reqs) {
     return [r.type, r.email, r.name || "", r.section || "", r.when || "", r.done ? "DONE" : ""];
   });
   if (rows.length) sheet.getRange(1, 1, rows.length, 6).setValues(rows);
+}
+
+function readRemarks() {
+  ensureSheets_();
+  var sheet = ss_().getSheetByName(REMARKS_SHEET);
+  var data  = sheet.getDataRange().getValues();
+  var rows  = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (!row[0]) continue; // code is column 1
+    rows.push({ code: String(row[0]), text: String(row[1] || ""), by: String(row[2] || ""), role: String(row[3] || ""), at: String(row[4] || "") });
+  }
+  return rows;
+}
+
+function writeRemarks(rows) {
+  ensureSheets_();
+  var sheet = ss_().getSheetByName(REMARKS_SHEET);
+  sheet.clearContents();
+  var out = rows.map(function (r) {
+    return [r.code, r.text || "", r.by || "", r.role || "", r.at || ""];
+  });
+  if (out.length) sheet.getRange(1, 1, out.length, 5).setValues(out);
 }
 
 function userExists(email) {

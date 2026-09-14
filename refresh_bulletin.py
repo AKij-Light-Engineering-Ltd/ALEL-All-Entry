@@ -1032,6 +1032,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .wf-btn.ghost{background:#fff;color:#5b6b81;border:1px solid var(--line2);font-weight:700;}
   .wf-btn:disabled{background:#ccd6e2;cursor:not-allowed;}
   .wf-hint{margin-top:7px;font-size:10px;color:#b45309;font-weight:700;}
+  /* remarks */
+  .remarks{margin:0 20px 16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#fff,#fafcfe);}
+  .rm-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(120deg,#f4f8fd,#eef4fb);border-bottom:1px solid var(--line);}
+  .rm-head .sec-h{margin:0;}
+  .rm-when{margin-left:auto;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:99px;background:#e8f6f0;color:#0b7a5f;}
+  .rm-when:empty{display:none;}
+  .rm-list{padding:0 14px;}
+  .rm-item{padding:10px 0;border-bottom:1px dashed var(--line);}
+  .rm-item:last-child{border-bottom:0;}
+  .rm-item.done{background:#f2fbf7;margin:0 -14px;padding:10px 14px;border-bottom:1px solid #cdece0;}
+  .rm-text{font-size:13.5px;color:var(--ink);white-space:pre-wrap;line-height:1.5;word-break:break-word;}
+  .rm-meta{margin-top:5px;font-size:11px;color:var(--mut);}
+  .rm-empty{padding:10px 0;font-size:12px;color:#94a3b5;}
+  .rm-edit{display:flex;gap:8px;padding:12px 14px;align-items:flex-start;background:#fafcff;border-top:1px solid var(--line);}
+  .rm-input{flex:1;min-height:44px;border:1px solid var(--line2);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;resize:vertical;}
+  .rm-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,159,122,.15);}
+  .rm-save{background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;}
+  .rm-save:hover{filter:brightness(1.06);}
+  @media (max-width:820px){ .remarks{margin:0 14px 14px;} .rm-edit{flex-direction:column;} .rm-save{width:100%;} }
   .wf-step.st-active{background:#fffbef;border-color:#e8c37a;border-style:dashed;}
   .wf-step.st-done{background:#f0fbf7;border-color:#bde7d8;}
   .wf-signed{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#0b7a5f;font-weight:700;}
@@ -1306,20 +1325,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     backendCall({action:'list'}, function(j){
       serverLoaded = true;
       if(j && j.ok){
-        try{ SERVER_USERS = j.users || []; SERVER_REQS = j.requests || []; SERVER_APPR = j.approvals || []; }catch(e){}
+        try{ SERVER_USERS = j.users || []; SERVER_REQS = j.requests || []; SERVER_APPR = j.approvals || []; SERVER_REMARKS = j.remarks || []; }catch(e){}
         try{ localStorage.setItem('alel_server_users', JSON.stringify(SERVER_USERS)); }catch(e){}
         if(done) done();
       } else { if(done) done(); }
     });
   }
-  var SERVER_USERS = []; var SERVER_REQS = []; var SERVER_APPR = [];
+  var SERVER_USERS = []; var SERVER_REQS = []; var SERVER_APPR = []; var SERVER_REMARKS = [];
   try{ SERVER_USERS = JSON.parse(localStorage.getItem('alel_server_users')||'[]'); }catch(e){}
+  try{ SERVER_REMARKS = JSON.parse(localStorage.getItem('alel_server_remarks')||'[]'); }catch(e){}
 
   var CATALOG = JSON.parse(document.getElementById('data-cat').textContent || '[]');
   var PEOPLE = JSON.parse(document.getElementById('data-people').textContent || '[]');
   var USERS = JSON.parse(document.getElementById('data-users').textContent || '[]');
   var STORE = {};
   try{ STORE = JSON.parse(localStorage.getItem('alel_approvals_v1')||'{}'); }catch(e){}
+  var REMARKS = {};
+  try{ REMARKS = JSON.parse(localStorage.getItem('alel_remarks_v1')||'{}'); }catch(e){}
   var SESSION = null;   // {id,name,role,section}
   try{ var s=localStorage.getItem('alel_login_v1'); if(s){ SESSION=JSON.parse(s); } }catch(e){}
 
@@ -1398,6 +1420,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     else { whoUser.textContent=''; }
     if(adminBtn){ adminBtn.style.display = (SESSION && SESSION.role==='admin') ? 'inline-flex' : 'none'; }
     if(SESSION && SESSION.role==='admin'){ renderAdminPanel(); }
+    mergeServerRemarks();
+    buildRemarks();
     refreshWF();
   }
   logoutBtn.addEventListener('click', function(){
@@ -1629,6 +1653,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   if(USING_BACKEND){
     pullServer(true, function(){
       mergeServerApprovals();
+      mergeServerRemarks();
       if(!SESSION){ showLogin(); showPanel('login'); showHome(); }
       else { applySession(); bootApply(); }
     });
@@ -1833,6 +1858,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       else { addHint(stA, nextWho('Md. Moshfequr Rahman')); }
     });
     apply();
+    renderRemarks();
   }
   function nextWho(name){
     var el=document.createElement('div'); el.className='wf-hint';
@@ -1917,6 +1943,63 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   document.getElementById('refreshBtn').addEventListener('click',function(){location.reload();});
   var sa=''; try{sa=localStorage.getItem('alel_auto')||'';}catch(e){}
   if(sa==='1') setAuto(true);
+
+  /* ---------- remarks (per bulletin, saved + synced, locked once approved) ---------- */
+  function saveRemarksLocal(){ try{ localStorage.setItem('alel_remarks_v1', JSON.stringify(REMARKS)); }catch(e){} }
+  function mergeServerRemarks(){
+    if(!SERVER_REMARKS || !SERVER_REMARKS.length) return;
+    SERVER_REMARKS.forEach(function(x){ if(x && x.code){ REMARKS[x.code]={text:x.text||'', by:x.by||'', role:x.role||'', at:x.at||''}; } });
+    saveRemarksLocal();
+    try{ localStorage.setItem('alel_server_remarks', JSON.stringify(SERVER_REMARKS)); }catch(e){}
+  }
+  function buildRemarks(){
+    bullets.forEach(function(b){
+      if(b.querySelector('.remarks')) return;
+      var wrap=document.createElement('div');
+      wrap.className='remarks';
+      wrap.setAttribute('data-code', b.getAttribute('data-code')||'');
+      wrap.innerHTML =
+        '<div class="rm-head"><h4 class="sec-h">Remarks / Observations</h4><span class="rm-when"></span></div>'+
+        '<div class="rm-list"></div>'+
+        '<div class="rm-edit">'+
+          '<textarea class="rm-input" rows="2" placeholder="Write your remarks / observations for this bulletin..."></textarea>'+
+          '<button type="button" class="rm-save">Save Remarks</button>'+
+        '</div>';
+      var wf=b.querySelector('.wf');
+      if(wf && wf.parentNode) wf.parentNode.insertBefore(wrap, wf.nextSibling); else b.appendChild(wrap);
+      wrap.querySelector('.rm-save').addEventListener('click', function(){
+        var code=wrap.getAttribute('data-code');
+        var txt=(wrap.querySelector('.rm-input').value||'').trim();
+        if(!txt) return;
+        REMARKS[code]={ text:txt, by:(SESSION&&SESSION.name)||'', role:(SESSION&&SESSION.role)||'', at:new Date().toLocaleString() };
+        saveRemarksLocal();
+        if(USING_BACKEND){ backendCall({action:'remark', code:code, text:REMARKS[code].text, by:REMARKS[code].by, role:REMARKS[code].role, at:REMARKS[code].at}); }
+        renderRemarks();
+      });
+    });
+  }
+  function renderRemarks(){
+    bullets.forEach(function(b){
+      var box=b.querySelector('.remarks'); if(!box) return;
+      var code=box.getAttribute('data-code'), rec=REMARKS[code];
+      var list=box.querySelector('.rm-list'), when=box.querySelector('.rm-when'),
+          edit=box.querySelector('.rm-edit'), inp=box.querySelector('.rm-input');
+      var done=!!stOf(b).a;
+      if(rec && rec.text){
+        list.innerHTML='<div class="rm-item'+(done?' done':'')+'">'+
+          '<div class="rm-text">'+escH(rec.text)+'</div>'+
+          '<div class="rm-meta">'+(rec.by?escH(rec.by):'')+(rec.role?' \u00b7 '+escH(rec.role):'')+(rec.at?' \u00b7 '+escH(rec.at):'')+'</div>'+
+        '</div>';
+        when.textContent = done ? 'Completed \u00b7 remarks locked' : 'Saved';
+        if(inp) inp.value = rec.text;
+      } else {
+        list.innerHTML='<div class="rm-empty">No remarks yet.</div>';
+        when.textContent='';
+      }
+      var canEdit = SESSION && canSee(b) && (!done || SESSION.role==='admin');
+      edit.style.display = canEdit ? '' : 'none';
+    });
+  }
 })();
 </script>
 </body>
