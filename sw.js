@@ -36,6 +36,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   // Never intercept the Apps Script / cross-origin backend
   if (url.origin !== self.location.origin) return;
+  // The production dashboard ships its own service worker — leave it alone
+  if (url.pathname.indexOf("/dashboard/") !== -1) return;
 
   if (req.mode === "navigate") {
     e.respondWith(
