@@ -99,6 +99,28 @@ main{padding:6px clamp(12px,2.5vw,26px) 46px;display:grid;gap:16px}
 .panel-head h3{font-size:13.5px;font-weight:700;font-family:"Sora",sans-serif}
 .panel-head .hint{margin-left:auto;font-size:11px;color:var(--muted)}
 .panel-head .unit{font-size:9.5px;font-weight:800;color:var(--c1);text-transform:uppercase;letter-spacing:.07em}
+.seg{margin-left:0;display:inline-flex;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--muted);font:inherit;font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;cursor:pointer;transition:.2s}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:linear-gradient(135deg,var(--c1),var(--c2));color:#05121a}
+.smv-search{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:7px 11px;min-width:230px;transition:border-color .2s,box-shadow .2s}
+.smv-search:focus-within{border-color:var(--c1);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+.smv-search svg{width:14px;height:14px;color:var(--muted);flex:none}
+.smv-search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-family:inherit;font-size:12.5px}
+.smv-search input::placeholder{color:var(--faint)}
+.smv-search button{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0 2px}
+.smv-search button:hover{color:var(--bad)}
+@media(max-width:820px){.smv-search{min-width:0;width:100%;margin-left:0;order:3}}
+.smv-run{display:flex;gap:26px;flex-wrap:wrap;padding:4px 16px 10px}
+.smv-run .s{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.smv-run .s b{display:block;font-family:"Sora",sans-serif;font-size:25px;font-weight:800;margin-top:2px;color:var(--text)}
+.smv-run .s.std b{color:var(--good)}
+.smv-run .s.act b{color:var(--warn)}
+.smv-run .s.gap b{color:var(--bad)}
+.smv-run .s.sel b{font-size:14px;color:var(--c1);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smv-foot{padding:0 16px 16px;display:flex;gap:22px;flex-wrap:wrap}
+.smv-foot .s{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.smv-foot .s b{display:block;font-size:17px;font-weight:800;color:var(--text);margin-top:2px;font-family:"Sora",sans-serif}
 .chart-wrap{position:relative;height:300px;padding:6px 12px 14px}
 .chart-wrap.tall{height:350px}
 
@@ -218,6 +240,25 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="panel-head"><h3>Achievement % by Line</h3><span class="hint">below 85% needs action · click to filter</span></div>
         <div class="chart-wrap tall"><canvas id="cAchLine"></canvas></div>
       </div>
+      <div class="panel span2">
+        <div class="panel-head">
+          <h3>SMV Analysis <span class="unit">standard vs actual · min / pc</span></h3>
+          <div class="smv-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>
+            <input id="smvSearch" type="text" placeholder="Search product / group / section…" autocomplete="off" spellcheck="false" />
+            <button id="smvClear" type="button" aria-label="Clear" hidden>&times;</button>
+          </div>
+          <div class="seg" id="smvSeg">
+            <button data-dim="item">Product</button>
+            <button data-dim="pg" class="on">Group</button>
+            <button data-dim="section">Section</button>
+          </div>
+        </div>
+        <div class="smv-run" id="smvRun"></div>
+        <div class="chart-wrap tall"><canvas id="cSmvAna"></canvas></div>
+        <div class="smv-foot" id="smvFoot"></div>
+      </div>
+
       <div class="panel">
         <div class="panel-head"><h3>Top Defect Types</h3><span class="hint">by quantity</span></div>
         <div class="chart-wrap"><canvas id="cTopDefect"></canvas></div>

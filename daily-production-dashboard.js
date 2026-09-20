@@ -87,7 +87,7 @@
   const state = {
     prod: [], qual: [], headers: { prod: [], qual: [] }, lastRow: { prod: 0, qual: 0 },
     sig: "", loading: false, first: true, tab: "exec", fullAt: 0, fp: "", syncing: false,
-    qFrom: "", qTo: "", pFrom: "", pTo: "",
+    qFrom: "", qTo: "", pFrom: "", pTo: "", smvDim: "pg", smvQ: "",
     filters: { from: "", to: "", section: "", line: "", pg: "", item: "" },
     preset: 30,
   };
@@ -246,6 +246,17 @@
       state.preset = b.dataset.all ? 0 : +b.dataset.d;
       render();
     });
+    /* SMV panel: dimension toggle + search */
+    const smvInp = $("#smvSearch"), smvClr = $("#smvClear");
+    if (smvInp) {
+      smvInp.addEventListener("input", () => { state.smvQ = smvInp.value; if (smvClr) smvClr.hidden = !smvInp.value; renderSmvAna(P()); });
+      smvInp.addEventListener("keydown", (e) => { if (e.key === "Escape") { smvInp.value = ""; state.smvQ = ""; smvClr.hidden = true; renderSmvAna(P()); } });
+      if (smvClr) smvClr.addEventListener("click", () => { smvInp.value = ""; state.smvQ = ""; smvClr.hidden = true; renderSmvAna(P()); smvInp.focus(); });
+    }
+    document.querySelectorAll("#smvSeg button").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll("#smvSeg button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on"); state.smvDim = b.dataset.dim; renderSmvAna(P());
+    }));
     document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
       state.tab = t.dataset.tab;
       document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
@@ -338,6 +349,43 @@
         <div class="kpi-top"><span class="kpi-ic"><svg viewBox="0 0 24 24" fill="currentColor">${ICON[ic]}</svg></span><span class="lab">${lab}</span></div>
         <div class="val">${val}</div><div class="sub">${sub}</div>
       </div>`).join("");
+  }
+
+  /* ---------------- SMV Analysis (searchable) ---------------- */
+  function renderSmvAna(p) {
+    const el = $("#cSmvAna"); if (!el) return;
+    const dim = state.smvDim;
+    const key = dim === "item" ? (r) => r.item : dim === "pg" ? (r) => r.pg : (r) => r.section;
+    const m = byKey(p, key);
+    let rows = [...m.entries()].map(([k, rs]) => ({ k, rs, ...agg(rs) })).filter((x) => x.out > 0);
+    const q = (state.smvQ || "").trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((x) =>
+        String(x.k).toLowerCase().includes(q) ||
+        x.rs.some((r) => String(r.item).toLowerCase().includes(q) || String(r.code).toLowerCase().includes(q))
+      );
+    }
+    rows.sort((a, b) => b.out - a.out);
+    const top = rows.slice(0, dim === "item" ? 12 : 14);
+
+    mk("cSmvAna", "bar", { labels: top.map((x) => x.k), datasets: [
+      { label: "Standard SMV", data: top.map((x) => +x.stdSmv.toFixed(3)), backgroundColor: "#34d399", borderRadius: 6, maxBarThickness: 22 },
+      { label: "Actual SMV", data: top.map((x) => +x.actSmv.toFixed(3)), backgroundColor: top.map((x) => (x.gap > 0 ? "#f59e0b" : "#22d3ee")), borderRadius: 6, maxBarThickness: 22 },
+    ] }, baseOpts());
+
+    const src = q ? rows.flatMap((x) => x.rs) : p;
+    const all = agg(src);
+    const label = q ? `Match: “${state.smvQ.trim()}”` : dim === "item" ? "All products" : dim === "pg" ? "All groups" : "All sections";
+    $("#smvRun").innerHTML =
+      `<span class="s sel">${esc(label)}</span>` +
+      `<span class="s std">Standard SMV<b>${nf(all.stdSmv, 3)}</b></span>` +
+      `<span class="s act">Actual SMV<b>${nf(all.actSmv, 3)}</b></span>` +
+      `<span class="s gap">Gap<b>${(all.gap >= 0 ? "+" : "") + nf(all.gap, 3)}</b></span>`;
+    $("#smvFoot").innerHTML = rows.length
+      ? `<span class="s">${q ? "Matches" : "Categories"}<b>${nf(rows.length)}</b></span>` +
+        `<span class="s">Output<b>${nf(all.out)}</b></span>` +
+        `<span class="s">Formula<b>SMV = 60 ÷ productivity (pcs / op-hr)</b></span>`
+      : `<span class="s" style="color:var(--bad)">No ${dim === "item" ? "product" : dim === "pg" ? "group" : "section"} matches “${esc(state.smvQ.trim())}”</span>`;
   }
 
   /* ---------------- Insight / Action engine ---------------- */
@@ -597,6 +645,7 @@
   function render() {
     const p = P(), q = Q(), pq = Pq(), lines = lineData(p, q, pq);
     renderKpis(p, q, pq);
+    renderSmvAna(p);
     renderActions(p, q, pq);
     renderCharts(p, q, lines);
     renderTables(lines, p, q, pq);
