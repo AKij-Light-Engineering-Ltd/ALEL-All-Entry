@@ -6,8 +6,13 @@
   "use strict";
 
   const SHEET_ID = "1vYNcYNcCog_AZgzSL4xs8WuyJVUCDxsmZzbblq9Xrtg";
-  const TABS = { prod: "Raw Data Production", qual: "Raw data Quality", master: "Master Data" };
-  const REFRESH_MS = 60000;
+  const SHEET = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+  const TABS = {
+    prod: { name: "Raw Data Production", end: "M" },
+    qual: { name: "Raw data Quality", end: "K" },
+  };
+  const TAIL_MS = 4000;     // cheap incremental poll — picks up new rows in ~4s
+  const FULL_MS = 180000;   // full re-sync every 3 min — catches edits & deletions
   const $ = (s) => document.querySelector(s);
   const PALETTE = ["#22d3ee","#6366f1","#a855f7","#34d399","#f59e0b","#ef4444","#14b8a6","#eab308","#f472b6","#38bdf8","#fb923c","#4ade80","#c084fc","#2dd4bf","#facc15","#f87171"];
 
@@ -49,10 +54,20 @@
 
   /* ---------------- Fetch ---------------- */
   async function fetchTab(name) {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(`${SHEET}?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
     return parseCSV(await res.text());
+  }
+  // fetch only rows after `afterRow` — tiny payload, used for live tail polling
+  async function fetchTail(tab, afterRow) {
+    const url = `${SHEET}?tqx=out:csv&sheet=${encodeURIComponent(tab.name)}&range=A${afterRow + 1}:${tab.end}${afterRow + 400}&_=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return [];
+    const rows = parseCSV(await res.text());
+    return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
+  }
+  function objsFrom(rows, header) {
+    return rows.map((r) => { const o = {}; header.forEach((h, i) => { if (h) o[h] = r[i]; }); return o; });
   }
   function rowsToObjects(rows) {
     const h = (rows[0] || []).map((x) => String(x).trim());
@@ -61,7 +76,8 @@
 
   /* ---------------- State ---------------- */
   const state = {
-    prod: [], qual: [], sig: "", loading: false, first: true, tab: "exec",
+    prod: [], qual: [], headers: { prod: [], qual: [] }, lastRow: { prod: 0, qual: 0 },
+    sig: "", loading: false, first: true, tab: "exec", fullAt: 0,
     filters: { from: "", to: "", section: "", line: "", pg: "", item: "" },
     preset: 30,
   };
@@ -84,30 +100,49 @@
     })).filter((r) => r.date && r.problem);
   }
 
-  /* ---------------- Load ---------------- */
-  async function load() {
+  /* ---------------- Load (full) ---------------- */
+  async function loadAll(silent) {
     if (state.loading) return;
-    state.loading = true; setLive(true, "Updating…");
+    state.loading = true; setLive(true, "Syncing…");
     try {
-      const [p, q] = await Promise.all([fetchTab(TABS.prod), fetchTab(TABS.qual)]);
-      const sig = `${p.length}|${q.length}|${p[p.length-1]?.[0]}|${q[q.length-1]?.[0]}`;
-      if (sig !== state.sig) {
-        state.prod = normalizeProd(rowsToObjects(p));
-        state.qual = normalizeQual(rowsToObjects(q));
-        state.sig = sig;
-        if (state.first) initFilters();
-        render();
-        if (!state.first) toast("New data loaded ✓");
-      }
-      const now = new Date();
-      setLive(false, `Live · ${now.toLocaleTimeString()}`);
-      $("#lastUpdated").textContent = `Last updated ${now.toLocaleString()}`;
+      const [p, q] = await Promise.all([fetchTab(TABS.prod.name), fetchTab(TABS.qual.name)]);
+      state.headers = { prod: (p[0] || []).map((x) => String(x).trim()), qual: (q[0] || []).map((x) => String(x).trim()) };
+      state.prod = normalizeProd(rowsToObjects(p));
+      state.qual = normalizeQual(rowsToObjects(q));
+      state.lastRow = { prod: p.length, qual: q.length };   // last SHEET row (header included)
+      state.fullAt = Date.now();
+      if (state.first) initFilters();
+      render();
+      if (!state.first && !silent) toast("Dashboard synced ✓");
+      markLive();
       state.first = false;
       $("#overlay").classList.add("hide");
     } catch (e) {
       setLive(false, "Offline — retrying…");
       $("#loadMsg").textContent = "Could not reach the sheet. Retrying…";
     } finally { state.loading = false; $("#refreshBtn").classList.remove("spin"); }
+  }
+
+  /* ---------------- Live tail poll (new rows, ~4s) ---------------- */
+  async function pollTail() {
+    if (document.hidden || state.loading || state.first) return;
+    try {
+      const [np, nq] = await Promise.all([
+        fetchTail(TABS.prod, state.lastRow.prod),
+        fetchTail(TABS.qual, state.lastRow.qual),
+      ]);
+      let added = 0;
+      if (np.length) { state.prod.push(...normalizeProd(objsFrom(np, state.headers.prod))); state.lastRow.prod += np.length; added += np.length; }
+      if (nq.length) { state.qual.push(...normalizeQual(objsFrom(nq, state.headers.qual))); state.lastRow.qual += nq.length; added += nq.length; }
+      if (added) { render(); toast(`+${added} new entr${added === 1 ? "y" : "ies"} synced`); }
+      markLive();
+    } catch (e) { /* silent — keep the current view */ }
+  }
+
+  function markLive() {
+    const t = new Date().toLocaleTimeString();
+    setLive(false, `Live · ${t}`);
+    $("#lastUpdated").textContent = `Last sync ${t} · live (${TAIL_MS / 1000}s) · full re-sync ${FULL_MS / 60000} min`;
   }
 
   /* ---------------- Filters ---------------- */
@@ -518,9 +553,14 @@
     Object.values(charts).forEach((c) => c.destroy()); Object.keys(charts).forEach((k) => delete charts[k]);
     render();
   });
-  $("#refreshBtn").addEventListener("click", () => { $("#refreshBtn").classList.add("spin"); load(); });
+  $("#refreshBtn").addEventListener("click", () => { $("#refreshBtn").classList.add("spin"); loadAll(); });
 
-  load();
-  setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  /* live sync: tail poll every 4s + full re-sync every 3 min + on focus/online */
+  loadAll();
+  setInterval(pollTail, TAIL_MS);
+  setInterval(() => { if (!document.hidden) loadAll(true); }, FULL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) { pollTail(); if (Date.now() - state.fullAt > FULL_MS) loadAll(true); }
+  });
+  window.addEventListener("online", () => loadAll(true));
 })();
