@@ -11,8 +11,8 @@
     prod: { name: "Raw Data Production", end: "M" },
     qual: { name: "Raw data Quality", end: "K" },
   };
-  const TAIL_MS = 4000;     // cheap incremental poll — picks up new rows in ~4s
-  const FULL_MS = 180000;   // full re-sync every 3 min — catches edits & deletions
+  const FAST_MS = 1000;     // change-signal poll (~100 bytes) — detects any add / edit / delete
+  const FULL_MS = 60000;    // full reconcile every 60s as a safety net
   const $ = (s) => document.querySelector(s);
   const PALETTE = ["#22d3ee","#6366f1","#a855f7","#34d399","#f59e0b","#ef4444","#14b8a6","#eab308","#f472b6","#38bdf8","#fb923c","#4ade80","#c084fc","#2dd4bf","#facc15","#f87171"];
 
@@ -66,6 +66,15 @@
     const rows = parseCSV(await res.text());
     return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
   }
+  // tiny aggregate "change signal" — row count + key column sums.
+  // Changes whenever a row is added, deleted, or any of those columns is edited.
+  async function fetchSignal(tab, select) {
+    const url = `${SHEET}?tqx=out:csv&sheet=${encodeURIComponent(tab.name)}&tq=${encodeURIComponent("select " + select)}&_=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return "err";
+    const rows = parseCSV(await res.text());
+    return (rows[1] || []).join("|") || "0";
+  }
   function objsFrom(rows, header) {
     return rows.map((r) => { const o = {}; header.forEach((h, i) => { if (h) o[h] = r[i]; }); return o; });
   }
@@ -77,7 +86,7 @@
   /* ---------------- State ---------------- */
   const state = {
     prod: [], qual: [], headers: { prod: [], qual: [] }, lastRow: { prod: 0, qual: 0 },
-    sig: "", loading: false, first: true, tab: "exec", fullAt: 0,
+    sig: "", loading: false, first: true, tab: "exec", fullAt: 0, fp: "", syncing: false,
     filters: { from: "", to: "", section: "", line: "", pg: "", item: "" },
     preset: 30,
   };
@@ -111,6 +120,7 @@
       state.qual = normalizeQual(rowsToObjects(q));
       state.lastRow = { prod: p.length, qual: q.length };   // last SHEET row (header included)
       state.fullAt = Date.now();
+      state.fp = await signal();                            // baseline change-signal
       if (state.first) initFilters();
       render();
       if (!state.first && !silent) toast("Dashboard synced ✓");
@@ -123,9 +133,17 @@
     } finally { state.loading = false; $("#refreshBtn").classList.remove("spin"); }
   }
 
-  /* ---------------- Live tail poll (new rows, ~4s) ---------------- */
+  /* ---------------- Real-time sync ----------------
+     1s change-signal (~100 bytes: row count + key column sums) detects ANY
+     add / edit / delete. On change we append new rows instantly, then
+     reconcile the rest in the background.                                        */
+  const signal = () => Promise.all([
+    fetchSignal(TABS.prod, "count(A), sum(F), sum(G)"),   // rows, manpower, production
+    fetchSignal(TABS.qual, "count(A), sum(I)"),           // rows, defective qty
+  ]).then(([a, b]) => a + "~" + b);
+
   async function pollTail() {
-    if (document.hidden || state.loading || state.first) return;
+    if (state.loading || state.first) return 0;
     try {
       const [np, nq] = await Promise.all([
         fetchTail(TABS.prod, state.lastRow.prod),
@@ -134,15 +152,30 @@
       let added = 0;
       if (np.length) { state.prod.push(...normalizeProd(objsFrom(np, state.headers.prod))); state.lastRow.prod += np.length; added += np.length; }
       if (nq.length) { state.qual.push(...normalizeQual(objsFrom(nq, state.headers.qual))); state.lastRow.qual += nq.length; added += nq.length; }
-      if (added) { render(); toast(`+${added} new entr${added === 1 ? "y" : "ies"} synced`); }
-      markLive();
-    } catch (e) { /* silent — keep the current view */ }
+      return added;
+    } catch (e) { return 0; }
   }
 
-  function markLive() {
+  let reconcileT = null;
+  async function checkSignal() {
+    if (document.hidden || state.first || state.syncing) return;
+    try {
+      const fp = await signal();
+      if (!state.fp) { state.fp = fp; return; }
+      if (fp === state.fp) return;
+      state.fp = fp; state.syncing = true;
+      const added = await pollTail();
+      if (added) { render(); toast(`+${added} new entr${added === 1 ? "y" : "ies"} synced`); }
+      markLive(added);
+      clearTimeout(reconcileT);
+      reconcileT = setTimeout(() => { state.syncing = false; loadAll(true); }, 1200);
+    } catch (e) { state.syncing = false; }
+  }
+
+  function markLive(added) {
     const t = new Date().toLocaleTimeString();
     setLive(false, `Live · ${t}`);
-    $("#lastUpdated").textContent = `Last sync ${t} · live (${TAIL_MS / 1000}s) · full re-sync ${FULL_MS / 60000} min`;
+    $("#lastUpdated").textContent = `${added ? `+${added} new · ` : ""}synced ${t} · real-time (${FAST_MS / 1000}s)`;
   }
 
   /* ---------------- Filters ---------------- */
@@ -555,12 +588,12 @@
   });
   $("#refreshBtn").addEventListener("click", () => { $("#refreshBtn").classList.add("spin"); loadAll(); });
 
-  /* live sync: tail poll every 4s + full re-sync every 3 min + on focus/online */
+  /* real-time sync: 1s change-signal + 60s full reconcile + on focus/online */
   loadAll();
-  setInterval(pollTail, TAIL_MS);
+  setInterval(checkSignal, FAST_MS);
   setInterval(() => { if (!document.hidden) loadAll(true); }, FULL_MS);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) { pollTail(); if (Date.now() - state.fullAt > FULL_MS) loadAll(true); }
+    if (!document.hidden) { checkSignal(); if (Date.now() - state.fullAt > FULL_MS) loadAll(true); }
   });
   window.addEventListener("online", () => loadAll(true));
 })();
