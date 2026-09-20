@@ -87,6 +87,7 @@
   const state = {
     prod: [], qual: [], headers: { prod: [], qual: [] }, lastRow: { prod: 0, qual: 0 },
     sig: "", loading: false, first: true, tab: "exec", fullAt: 0, fp: "", syncing: false,
+    qFrom: "", qTo: "", pFrom: "", pTo: "",
     filters: { from: "", to: "", section: "", line: "", pg: "", item: "" },
     preset: 30,
   };
@@ -120,6 +121,11 @@
       state.qual = normalizeQual(rowsToObjects(q));
       state.lastRow = { prod: p.length, qual: q.length };   // last SHEET row (header included)
       state.fullAt = Date.now();
+      // data-coverage ranges (quality tab usually starts later than production)
+      const pd = state.prod.map((r) => dstr(r.date)).filter(Boolean).sort();
+      const qd = state.qual.map((r) => dstr(r.date)).filter(Boolean).sort();
+      state.pFrom = pd[0] || ""; state.pTo = pd[pd.length - 1] || "";
+      state.qFrom = qd[0] || ""; state.qTo = qd[qd.length - 1] || "";
       state.fp = await signal();                            // baseline change-signal
       if (state.first) initFilters();
       render();
@@ -191,6 +197,21 @@
   }
   const P = () => state.prod.filter(inRange);
   const Q = () => state.qual.filter(inRange);
+
+  /* ---- quality coverage ----------------------------------------------
+     The Quality tab usually starts later than Production. Any wastage
+     RATIO must use only the output produced inside that overlap, else the
+     earlier months (production with no defect records) dilute the PPM.   */
+  function alignedWindow() {
+    const f = state.filters;
+    const from = state.qFrom && (!f.from || f.from < state.qFrom) ? state.qFrom : (f.from || state.qFrom);
+    const to = state.qTo && (!f.to || f.to > state.qTo) ? state.qTo : (f.to || state.qTo);
+    return { from, to };
+  }
+  const isClamped = () => { const f = state.filters; return !!(state.qFrom && ((f.from && f.from < state.qFrom) || (f.to && f.to > state.qTo))); };
+  const Pq = () => { const w = alignedWindow(); return state.prod.filter((r) => { const k = dstr(r.date); return k >= w.from && k <= w.to && inRange(r); }); };
+  const MONA = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fmtShort = (iso) => { if (!iso) return "—"; const p = iso.split("-"); return `${+p[2]}-${MONA[+p[1] - 1]}`; };
 
   function initFilters() {
     const uq = (f) => [...new Set(state.prod.map(f).filter(Boolean))].sort();
@@ -271,14 +292,16 @@
     rows.forEach((r) => { const k = key(r) || "(blank)"; if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
     return m;
   }
-  function lineData(p, q) {
+  function lineData(p, q, pq) {
     const pm = byKey(p, (r) => r.line);
     const qm = byKey(q, (r) => r.line);
+    const am = byKey(pq || p, (r) => r.line);
     return [...pm.entries()].map(([line, rows]) => {
       const a = agg(rows);
       const dq = sum(qm.get(line) || [], (r) => r.qty);
+      const baseOut = sum(am.get(line) || [], (r) => r.out) || a.out;   // aligned output for wastage
       const section = rows[0].section || "";
-      return { line, section, ...a, defects: dq, ppm: a.out > 0 ? (dq / a.out) * 1e6 : 0, rate: a.out > 0 ? (dq / a.out) * 100 : 0 };
+      return { line, section, ...a, defects: dq, ppm: baseOut > 0 ? (dq / baseOut) * 1e6 : 0, rate: baseOut > 0 ? (dq / baseOut) * 100 : 0 };
     }).filter((x) => x.out > 0).sort((a, b) => b.lostPcs - a.lostPcs);
   }
 
@@ -293,9 +316,12 @@
     mp:'<path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.7 0-6 1.3-6 4v3h8v-3c0-1 .4-1.9 1.1-2.6A8.5 8.5 0 0 0 8 14z"/>',
     lines:'<path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>',
   };
-  function renderKpis(p, q) {
+  function renderKpis(p, q, pq) {
     const a = agg(p), def = sum(q, (r) => r.qty);
-    const ppm = a.out > 0 ? (def / a.out) * 1e6 : 0;
+    const baseOut = sum(pq, (r) => r.out) || a.out;          // output inside the quality-coverage window
+    const ppm = baseOut > 0 ? (def / baseOut) * 1e6 : 0;
+    const rate = baseOut > 0 ? (def / baseOut) * 100 : 0;
+    const clamped = isClamped();
     const lines = new Set(p.map((r) => r.line)).size;
     const cards = [
       ["Total Output", nf(a.out), `${nf(p.length)} entries`, "out", "#22d3ee", "#0ea5e9"],
@@ -303,7 +329,7 @@
       ["Line Efficiency", nf(a.eff, 1) + "%", `standard ÷ actual pace`, "eff", "#34d399", "#0d9488"],
       ["SMV Gap", (a.gap >= 0 ? "+" : "") + nf(a.gap, 3), "min/pc over standard", "smv", "#f59e0b", "#ef4444"],
       ["Lost Capacity", nf(a.lostPcs), "pcs recoverable", "lost", "#38bdf8", "#6366f1"],
-      ["Wastage", nf(ppm), `${nf(def)} defective pcs · PPM`, "def", "#ef4444", "#f97316"],
+      ["Wastage", nf(ppm), `${nf(def)} pcs · ${nf(rate, 2)}% rate${clamped ? ` · ⚠ quality data from ${fmtShort(state.qFrom)}` : ""}`, "def", "#ef4444", "#f97316"],
       ["Manpower Productivity", nf(a.actualProd, 2), `pcs / op-hr · std ${nf(a.stdProd, 2)}`, "mp", "#a855f7", "#6366f1"],
       ["Active Lines", nf(lines), `${new Set(p.map((r) => r.item)).size} items`, "lines", "#f472b6", "#a855f7"],
     ];
@@ -329,8 +355,8 @@
   ];
   const fixFor = (t) => { for (const [re, s] of FIX) if (re.test(t)) return s; return "Run a 5-Why root-cause on this defect at the line and standardise the countermeasure."; };
 
-  function buildInsights(p, q) {
-    const lines = lineData(p, q);
+  function buildInsights(p, q, pq) {
+    const lines = lineData(p, q, pq);
     const out = [];
     if (!lines.length) return out;
     const totalOut = sum(lines, (x) => x.out);
@@ -391,7 +417,7 @@
     if (best) out.push({
       sev: "good", tag: "REPLICATE", score: -1,
       title: `${best.line} — best practice at ${nf(best.achv, 1)}%`,
-      why: `Running <b>${nf(b.achv, 1)}%</b> of target with an actual SMV of only <b>${nf(b.actSmv, 3)}</b> min/pc.`,
+      why: `Running <b>${nf(best.achv, 1)}%</b> of target with an actual SMV of only <b>${nf(best.actSmv, 3)}</b> min/pc.`,
       action: "Capture what this line does differently (fixture, method, feeding, supervision) and horizontal-deploy it to the weak lines above.",
       impact: [["Achievement", nf(best.achv, 1) + "%"], ["Efficiency", nf(best.eff, 1) + "%"]],
     });
@@ -409,8 +435,8 @@
   }
   const fmtHour = (h) => `${String(h % 12 === 0 ? 12 : h % 12).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 
-  function renderActions(p, q) {
-    const items = buildInsights(p, q);
+  function renderActions(p, q, pq) {
+    const items = buildInsights(p, q, pq);
     const bad = items.filter((i) => i.sev === "bad").length;
     $("#acCount").textContent = `${items.length} finding${items.length === 1 ? "" : "s"}`;
     $("#tabAlerts").textContent = bad || items.filter((i) => i.sev !== "good").length;
@@ -533,9 +559,11 @@
   }
 
   /* ---------------- Tables ---------------- */
-  function renderTables(lines, p, q) {
+  function renderTables(lines, p, q, pq) {
     const dq = new Map();
     q.forEach((r) => dq.set(r.line, (dq.get(r.line) || 0) + r.qty));
+    const aq = new Map();
+    (pq || p).forEach((r) => { const k = r.item || r.code; aq.set(k, (aq.get(k) || 0) + r.out); });
     $("#tblLine").innerHTML = lines.map((x, i) => {
       const st = x.achv >= 95 ? ["good", "On target"] : x.achv >= 85 ? ["warn", "Watch"] : ["bad", "Action"];
       return `<tr data-line="${esc(x.line)}">
@@ -557,7 +585,7 @@
     const im = new Map();
     p.forEach((r) => { const k = r.item || r.code; if (!im.has(k)) im.set(k, { item: k, pg: r.pg, out: 0, stdH: 0 }); const o = im.get(k); o.out += r.out; if (r.target > 0) o.stdH += r.out / r.target; });
     const dqi = new Map(); q.forEach((r) => { const k = r.item || r.code; dqi.set(k, (dqi.get(k) || 0) + r.qty); });
-    const irows = [...im.values()].map((o) => ({ ...o, achv: o.stdH > 0 ? (o.out / o.stdH) * 100 : 0, def: dqi.get(o.item) || 0, ppm: o.out > 0 ? ((dqi.get(o.item) || 0) / o.out) * 1e6 : 0 })).sort((a, b) => b.out - a.out).slice(0, 15);
+    const irows = [...im.values()].map((o) => { const base = aq.get(o.item) || o.out; return { ...o, achv: o.stdH > 0 ? (o.out / o.stdH) * 100 : 0, def: dqi.get(o.item) || 0, ppm: base > 0 ? ((dqi.get(o.item) || 0) / base) * 1e6 : 0 }; }).sort((a, b) => b.out - a.out).slice(0, 15);
     $("#tblItem").innerHTML = irows.map((r, i) => `<tr data-item="${esc(r.item)}">
       <td><span class="rank">${i + 1}</span></td><td>${esc(r.item)}</td><td>${esc(r.pg)}</td>
       <td class="num">${nf(r.out)}</td><td class="num">${nf(r.achv, 1)}%</td><td class="num">${nf(r.def)}</td><td class="num">${nf(r.ppm)}</td>
@@ -567,11 +595,23 @@
 
   /* ---------------- Render ---------------- */
   function render() {
-    const p = P(), q = Q(), lines = lineData(p, q);
-    renderKpis(p, q);
-    renderActions(p, q);
+    const p = P(), q = Q(), pq = Pq(), lines = lineData(p, q, pq);
+    renderKpis(p, q, pq);
+    renderActions(p, q, pq);
     renderCharts(p, q, lines);
-    renderTables(lines, p, q);
+    renderTables(lines, p, q, pq);
+    renderCoverage();
+  }
+
+  /* data-coverage banner (Quality tab) */
+  function renderCoverage() {
+    const el = $("#covNote"); if (!el) return;
+    if (!state.qFrom) { el.className = "cov-note warn"; el.innerHTML = "⚠ No quality data loaded — wastage figures are unavailable."; return; }
+    const w = alignedWindow(), clamped = isClamped();
+    el.className = "cov-note" + (clamped ? " warn" : "");
+    el.innerHTML = clamped
+      ? `⚠ <b>Wastage is aligned to the overlap window.</b> Production covers <b>${fmtShort(state.pFrom)} → ${fmtShort(state.pTo)}</b>, but quality records only exist from <b>${fmtShort(state.qFrom)}</b> → <b>${fmtShort(state.qTo)}</b>. Wastage PPM is therefore calculated on <b>${fmtShort(w.from)} → ${fmtShort(w.to)}</b> (${nf(sum(Pq(), (r) => r.out))} pcs) so the ratio isn't diluted by earlier months that have no defect records.`
+      : `Quality data covers <b>${fmtShort(state.qFrom)} → ${fmtShort(state.qTo)}</b> — fully overlapping the selected period. Wastage PPM is calculated on the actual output in this window.`;
   }
 
   /* ---------------- misc ---------------- */

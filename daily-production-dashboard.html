@@ -123,6 +123,12 @@ main{padding:6px clamp(12px,2.5vw,26px) 46px;display:grid;gap:16px}
 .ac-impact b{font-family:"Sora",sans-serif;font-size:15px;display:block;color:var(--text)}
 .ac-empty{padding:26px 18px;color:var(--muted);font-size:13px}
 
+/* ---------- data coverage note ---------- */
+.cov-note{margin:0 0 2px;padding:12px 16px;border-radius:14px;font-size:12.5px;line-height:1.6;color:var(--muted);background:color-mix(in srgb,var(--c1) 7%,transparent);border:1px solid color-mix(in srgb,var(--c1) 22%,transparent)}
+.cov-note b{color:var(--text)}
+.cov-note.warn{background:color-mix(in srgb,var(--warn) 10%,transparent);border-color:color-mix(in srgb,var(--warn) 36%,transparent)}
+.cov-note.warn b{color:var(--warn)}
+
 /* ---------- table ---------- */
 .table-wrap{max-height:520px;overflow:auto;padding:0 6px 10px}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
@@ -259,6 +265,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
   <!-- QUALITY -->
   <div id="vQual" class="hidden">
+    <div class="cov-note" id="covNote"></div>
     <div class="cards">
       <div class="panel span2">
         <div class="panel-head"><h3>Wastage Pareto <span class="unit">qty + cumulative %</span></h3><span class="hint">80/20 focus</span></div>
