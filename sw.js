@@ -1,5 +1,9 @@
-/* ALEL OPEX Hub — service worker (offline app shell) */
-const CACHE = "alel-opex-v1";
+/* ALEL OPEX Hub — service worker
+   Strategy:
+     • documents + scripts/styles/json  → NETWORK FIRST (updates land immediately, cache is the offline fallback)
+     • icons / images                    → CACHE FIRST (fast, rarely change)
+   This prevents the hub from serving stale copies of the apps. */
+const CACHE = "alel-opex-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -13,18 +17,13 @@ const SHELL = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches
-      .open(CACHE)
-      .then((c) => c.addAll(SHELL))
-      .catch(() => {})
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches
-      .keys()
+    caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
@@ -34,24 +33,30 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Never intercept the Apps Script / cross-origin backend
+  // Never intercept cross-origin (Apps Script backend, Google Sheets, fonts)
   if (url.origin !== self.location.origin) return;
-  // The production dashboard ships its own service worker — leave it alone
+  // The production dashboard ships its own service worker
   if (url.pathname.indexOf("/dashboard/") !== -1) return;
 
-  if (req.mode === "navigate") {
+  const fresh = req.mode === "navigate" || /\.(html|js|css|json|webmanifest)$/i.test(url.pathname);
+
+  if (fresh) {
+    // network-first: always try the live file, fall back to cache when offline
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          if (res && res.status === 200 && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match("./index.html")))
+        .catch(() => caches.match(req).then((r) => r || (req.mode === "navigate" ? caches.match("./index.html") : undefined)))
     );
     return;
   }
 
+  // cache-first for static assets
   e.respondWith(
     caches.match(req).then(
       (cached) =>
