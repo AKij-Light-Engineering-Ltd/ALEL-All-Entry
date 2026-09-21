@@ -51,7 +51,6 @@ function buildPlan() {
   if (values.length < 3) return { ok: false, error: "Tab too small: " + tab };
 
   var hdr = values[0].map(function (h) { return String(h == null ? "" : h).trim(); });
-  var r1 = values[1].map(function (h) { return String(h == null ? "" : h).trim(); });
 
   function find(re, not) {
     for (var i = 0; i < hdr.length; i++) {
@@ -63,10 +62,17 @@ function buildPlan() {
   var iFc = find(/forecast/i, /value/i), iOpen = find(/opening/i, /value/i);
   var iReq = find(/^req\.?\s*qty$/i), iProd = find(/total\s*production/i), iDel = find(/delivered\s*quantity/i);
 
+  /* locate the daily-production columns: scan the first few rows for date cells.
+     getValues() returns date-formatted cells as Date objects, so handle both
+     Date objects and raw Excel serial numbers. */
   var dateCols = [], dateIdx = [];
-  for (var c = 0; c < r1.length; c++) {
-    var n = Number(r1[c]);
-    if (n > 40000 && n < 60000) { dateCols.push(xlDate(n)); dateIdx.push(c); }
+  for (var scan = 1; scan <= Math.min(3, values.length - 1); scan++) {
+    var cand = values[scan] || [], cols = [], idx = [];
+    for (var c = 0; c < cand.length; c++) {
+      var iso = dateCellISO(cand[c]);
+      if (iso) { cols.push(iso); idx.push(c); }
+    }
+    if (cols.length > dateCols.length) { dateCols = cols; dateIdx = idx; }
   }
 
   var rows = [];
@@ -125,6 +131,27 @@ function num(v) {
   if (v == null || v === "") return 0;
   var n = parseFloat(String(v).replace(/[%,]/g, ""));
   return isNaN(n) ? 0 : n;
+}
+/* Excel serial from either a Date object or a number/string */
+function serialOf(v) {
+  if (v instanceof Date) return v.getTime() / 86400000 + 25569;
+  if (v == null || v === "") return 0;
+  var n = Number(String(v).trim());
+  return isNaN(n) ? 0 : n;
+}
+/* "yyyy-MM-dd" if the cell is a plausible calendar date in this sheet's range */
+function dateCellISO(v) {
+  if (v instanceof Date) {
+    var s = v.getTime() / 86400000 + 25569;
+    if (s > 40000 && s < 60000) {
+      try { return Utilities.formatDate(v, Session.getScriptTimeZone(), "yyyy-MM-dd"); } catch (e) { return xlDate(Math.round(s)); }
+    }
+    return null;
+  }
+  if (v == null || v === "") return null;
+  var n = Number(String(v).trim());
+  if (!isNaN(n) && n > 40000 && n < 60000) return xlDate(Math.round(n));
+  return null;
 }
 function xlDate(n) {
   var d = new Date(Date.UTC(1899, 11, 30) + n * 86400000);

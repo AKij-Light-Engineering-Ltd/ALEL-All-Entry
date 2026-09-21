@@ -10,9 +10,8 @@
   const SHEET = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
   const GROUP_TAB = "SKU Plan 3M";
   const SNAPSHOT = "plan-snapshot.json";
-  // Optional live proxy (Apps Script) — works even when the workbook is private.
-  // Paste the /exec URL from apps-script/PlanProxy.gs here.
-  const PROXY_URL = "";
+  // Live proxy (Google Apps Script) — serves the private workbook read-only.
+  const PROXY_URL = "https://script.google.com/macros/s/AKfycbxP5ZKxXIiHlzYtvdYkfkWdByP1W_n0y9t1S52V6OQuZn9N4WoPMC59OcHSdcR2cW7Fqw/exec";
   const OFF_DAYS = [5];                     // Friday = weekly off
   const REFRESH_MS = 60000;
   const MONA = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
