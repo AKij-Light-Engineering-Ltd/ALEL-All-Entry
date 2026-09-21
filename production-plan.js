@@ -9,6 +9,10 @@
   const SHEET_ID = "1LYws_M4TANxF0O0N3lJ7RixKxsEQSOsTJfa4h5V8pro";
   const SHEET = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
   const GROUP_TAB = "SKU Plan 3M";
+  const SNAPSHOT = "plan-snapshot.json";
+  // Optional live proxy (Apps Script) — works even when the workbook is private.
+  // Paste the /exec URL from apps-script/PlanProxy.gs here.
+  const PROXY_URL = "";
   const OFF_DAYS = [5];                     // Friday = weekly off
   const REFRESH_MS = 60000;
   const MONA = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -88,43 +92,73 @@
     return { rows: out, dateCols };
   }
 
-  /* ---------------- load ---------------- */
+  /* ---------------- load (proxy → public sheet → snapshot) ---------------- */
   async function load() {
     if (state.loading) return;
     state.loading = true; setLive(true, "Loading plan…");
     try {
+      let data = null, source = "";
       const now = new Date();
-      const months = [];
-      for (let b = 0; b <= 4; b++) months.push(new Date(now.getFullYear(), now.getMonth() - b, 1));
-      let found = null;
-      for (const mo of months) {
-        for (const cand of tabCandidates(mo)) {
-          const rows = await tryTab(cand);
-          if (rows && rows.length > 5) { found = { tab: cand, rows, month: mo }; break; }
+      const months = []; for (let b = 0; b <= 4; b++) months.push(new Date(now.getFullYear(), now.getMonth() - b, 1));
+
+      /* 1) live Apps Script proxy — works with a private workbook */
+      if (PROXY_URL) {
+        try {
+          const r = await fetch(`${PROXY_URL}?action=plan&_=${Date.now()}`, { cache: "no-store" });
+          const j = await r.json();
+          if (j && j.ok && j.rows && j.rows.length) { data = { tab: j.tab, rows: j.rows, dateCols: (j.dateCols || []).map((d) => ({ date: d })), groups: j.groups || {} }; source = "live · proxy"; }
+        } catch (e) { /* fall through */ }
+      }
+
+      /* 2) public sheet (gviz) */
+      if (!data) {
+        for (const mo of months) {
+          for (const cand of tabCandidates(mo)) {
+            const rows = await tryTab(cand);
+            if (rows && rows.length > 5) {
+              const parsed = parsePlan(rows);
+              const gm = await tryTab(GROUP_TAB);
+              const groups = {};
+              if (gm) gm.slice(4).forEach((r) => { const c = String(r[1] || "").trim(); const g = String(r[7] || "").trim(); if (c && g) groups[c] = g; });
+              data = { tab: cand, rows: parsed.rows, dateCols: parsed.dateCols, groups };
+              source = "live · sheet public";
+              break;
+            }
+          }
+          if (data) break;
         }
-        if (found) break;
       }
-      if (!found) throw new Error("No plan tab found");
-      state.months = months; state.tab = found.tab; state.month = dstr(found.month).slice(0, 7);
-      const parsed = parsePlan(found.rows);
-      state.rows = parsed.rows; state.dateCols = parsed.dateCols;
-      const gm = await tryTab(GROUP_TAB);
-      if (gm) {
-        const map = {};
-        gm.slice(4).forEach((r) => { const c = String(r[1] || "").trim(); const g = String(r[7] || "").trim(); if (c && g) map[c] = g; });
-        state.groups = map;
+
+      /* 3) bundled snapshot (always works) */
+      if (!data) {
+        const r = await fetch(`${SNAPSHOT}?_=${Date.now()}`, { cache: "no-store" });
+        const j = await r.json();
+        data = {
+          tab: j.tab,
+          rows: j.rows.map((x) => ({ code: x.c, name: x.n, fc: x.f, open: x.o, req: x.q, prod: x.p, del: x.d, daily: x.y || {} })),
+          dateCols: (j.dateCols || []).map((d) => ({ date: d })),
+          groups: j.groups || {},
+        };
+        source = "snapshot · " + new Date(j.generatedAt).toLocaleString();
       }
+
+      state.months = months; state.tab = data.tab;
+      const mm = (data.tab.match(/([A-Za-z]{3})\s*(\d{2})/) || []);
+      const mi = MONA.findIndex((m) => m.toLowerCase() === String(mm[1] || "").toLowerCase());
+      state.month = mi >= 0 ? `${2000 + Number(mm[2])}-${String(mi + 1).padStart(2, "0")}` : dstr(new Date()).slice(0, 7);
+      state.rows = data.rows; state.dateCols = data.dateCols; state.groups = data.groups;
       state.rows.forEach((r) => { if (!r.group) r.group = state.groups[r.code] || guessGroup(r.name); });
-      initFilters();
+      state.source = source;
+      if (state.first) initFilters();
       render();
       const t = new Date().toLocaleTimeString();
-      setLive(false, `Live · ${t}`);
-      $("#lastUpdated").textContent = `Plan tab “${state.tab}” · ${state.rows.length} SKUs · updated ${t}`;
+      setLive(false, `Plan · ${t}`);
+      $("#lastUpdated").textContent = `${source} · tab “${state.tab}” · ${state.rows.length} SKUs · updated ${t}`;
       $("#overlay").classList.add("hide");
       state.first = false;
     } catch (e) {
-      setLive(false, "Cannot read the sheet");
-      $("#loadMsg").innerHTML = "Could not read the planning workbook.<br><small style='opacity:.8'>The Google Sheet must be shared as “Anyone with the link → Viewer”.</small>";
+      setLive(false, "Cannot read the plan");
+      $("#loadMsg").innerHTML = "Could not load the plan data.";
     } finally { state.loading = false; $("#refreshBtn").classList.remove("spin"); }
   }
 
