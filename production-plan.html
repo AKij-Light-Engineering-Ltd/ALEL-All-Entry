@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Production Plan — ALEL OPEX</title>
+<meta name="description" content="Daily production plan — how much of each SKU to produce each day to meet the monthly forecast and delivery commitment." />
+<meta name="theme-color" content="#070b14" />
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#070b14; --bg2:#0b1120; --panel:#101827; --panel2:#131d31;
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.15);
+  --text:#e9eefb; --muted:#8ea0bd; --faint:#5f7091;
+  --good:#34d399; --warn:#f59e0b; --bad:#ef4444; --info:#38bdf8;
+  --c1:#22d3ee; --c2:#6366f1; --c3:#a855f7;
+  --radius:16px; --shadow:0 24px 60px -34px rgba(0,0,0,.95);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+[data-theme="light"]{--bg:#eef2f8;--bg2:#fff;--panel:#fff;--panel2:#f6f8fc;--border:rgba(15,23,42,.1);--border2:rgba(15,23,42,.17);--text:#0f172a;--muted:#5a6780;--faint:#8494ab;--shadow:0 22px 50px -40px rgba(20,30,70,.5)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .4s,color .4s;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+
+.topbar{position:sticky;top:0;z-index:70;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px clamp(12px,2.5vw,26px);background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto;min-width:0}
+.brand .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;font-weight:800;font-size:14px;flex:none;box-shadow:0 0 26px -8px #12b886}
+.brand h1{font-family:"Sora",sans-serif;font-size:17px;font-weight:800;white-space:nowrap}
+.brand small{display:block;font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.live-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;border:1px solid var(--border);background:var(--panel);font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--good);animation:pulse 1.8s infinite}
+.live-pill.updating .live-dot{background:var(--warn)}
+@keyframes pulse{70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.tbtn{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:11px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-weight:600;font-size:13px;cursor:pointer;transition:.25s var(--ease);font-family:inherit}
+.tbtn:hover{border-color:var(--c1);transform:translateY(-2px)}
+.tbtn svg{width:16px;height:16px}.tbtn.spin svg{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.tabs{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;padding:12px clamp(12px,2.5vw,26px) 0;border-bottom:1px solid var(--border);position:sticky;top:67px;z-index:60;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px)}
+.tab{position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px 18px 11px;border:1px solid transparent;border-bottom:0;border-radius:12px 12px 0 0;background:transparent;color:var(--muted);font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:.22s var(--ease);white-space:nowrap}
+.tab:hover{color:var(--text)}.tab.on{color:var(--text);background:linear-gradient(160deg,var(--panel),var(--panel2));border-color:var(--border);margin-bottom:-1px}
+.tab.on::before{content:"";position:absolute;left:12px;right:12px;top:0;height:3px;border-radius:0 0 5px 5px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+
+.filters{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:14px clamp(12px,2.5vw,26px)}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.fld select,.fld input{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:13px;min-width:150px}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--c1);box-shadow:0 0 0 3px rgba(34,211,238,.16)}
+
+main{padding:6px clamp(12px,2.5vw,26px) 46px;display:grid;gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+.span2{grid-column:span 2}@media(max-width:820px){.span2{grid-column:span 1}}
+
+.kpi{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px 17px;box-shadow:var(--shadow)}
+.kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,var(--k1),var(--k2))}
+.kpi::after{content:"";position:absolute;right:-34px;top:-34px;width:118px;height:118px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--k1) 32%,transparent),transparent 70%);opacity:.5;pointer-events:none}
+.kpi-top{display:flex;align-items:center;gap:9px;position:relative;z-index:1}
+.kpi-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,var(--k1),var(--k2));color:#05121a;flex:none}
+.kpi-ic svg{width:16px;height:16px}
+.kpi .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.kpi .val{font-family:"Sora",sans-serif;font-size:26px;font-weight:800;margin-top:10px;letter-spacing:-.02em;position:relative;z-index:1}
+.kpi .sub{font-size:11.5px;color:var(--muted);margin-top:3px;position:relative;z-index:1}
+
+.panel{position:relative;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.panel::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22d3ee,#6366f1,#a855f7,#34d399);opacity:.85}
+.panel-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;flex-wrap:wrap}
+.panel-head h3{font-size:13.5px;font-weight:700;font-family:"Sora",sans-serif}
+.panel-head .hint{margin-left:auto;font-size:11px;color:var(--muted)}
+.panel-head .unit{font-size:9.5px;font-weight:800;color:var(--c1);text-transform:uppercase;letter-spacing:.07em}
+.chart-wrap{position:relative;height:300px;padding:6px 12px 14px}
+.chart-wrap.tall{height:350px}
+.srch{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:7px 11px;min-width:220px}
+.srch:focus-within{border-color:var(--c1);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+.srch svg{width:14px;height:14px;color:var(--muted);flex:none}
+.srch input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-family:inherit;font-size:12.5px}
+.srch button{border:0;background:none;color:var(--muted);font-size:16px;cursor:pointer}
+.srch button:hover{color:var(--bad)}
+
+.table-wrap{max-height:640px;overflow:auto;padding:0 6px 10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 11px;white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;z-index:2}
+tbody tr{border-top:1px solid var(--border)}
+tbody tr:hover{background:color-mix(in srgb,var(--c1) 8%,transparent)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.rank{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--panel2);font-size:11px;font-weight:800;color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.tag.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:#5ee6a8}
+.tag.warn{background:color-mix(in srgb,var(--warn) 20%,transparent);color:#ffc266}
+.tag.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:#ff9b9b}
+.tag.info{background:color-mix(in srgb,var(--info) 18%,transparent);color:#7dd3fc}
+[data-theme="light"] .tag.good{color:#047857}[data-theme="light"] .tag.warn{color:#b45309}[data-theme="light"] .tag.bad{color:#b91c1c}[data-theme="light"] .tag.info{color:#0369a1}
+.tgt{font-family:"Sora",sans-serif;font-weight:800;color:var(--c1)}
+
+.note{margin:0 0 2px;padding:12px 16px;border-radius:14px;font-size:12.5px;line-height:1.6;color:var(--muted);background:color-mix(in srgb,var(--c1) 7%,transparent);border:1px solid color-mix(in srgb,var(--c1) 22%,transparent)}
+.note b{color:var(--text)}.note.warn{background:color-mix(in srgb,var(--warn) 10%,transparent);border-color:color-mix(in srgb,var(--warn) 36%,transparent)}
+.note.warn b{color:var(--warn)}
+
+.hidden{display:none!important}
+.overlay{position:fixed;inset:0;z-index:150;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(7px);transition:opacity .4s}
+.overlay.hide{opacity:0;pointer-events:none}
+.ring{width:60px;height:60px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--c1);margin:0 auto 14px;animation:spin .9s linear infinite}
+.loader{text-align:center}.loader p{color:var(--muted);font-size:13.5px;font-weight:600}
+.footer{text-align:center;color:var(--faint);font-size:11.5px;padding:4px 20px 30px}
+@media(max-width:640px){.brand h1{font-size:15px}.chart-wrap{height:260px}.tabs{top:63px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">ALEL</div>
+    <div>
+      <h1>Production Plan</h1>
+      <small>Daily build plan · IE / PPC · OPEX</small>
+    </div>
+  </div>
+  <span class="live-pill" id="livePill"><span class="live-dot"></span><span id="liveText">Connecting…</span></span>
+  <button class="tbtn" id="refreshBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg> Refresh</button>
+  <button class="tbtn" id="themeBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="today">Today's Plan</button>
+  <button class="tab" data-tab="sku">SKU Plan</button>
+  <button class="tab" data-tab="group">Group Plan</button>
+  <button class="tab" data-tab="progress">Progress</button>
+</nav>
+
+<section class="filters">
+  <div class="fld"><label>Plan month</label><select id="fMonth"></select></div>
+  <div class="fld"><label>Product group</label><select id="fGroup"><option value="">All</option></select></div>
+  <div class="fld"><label>Plan as of</label><input type="date" id="fAsOf" /></div>
+  <div class="fld"><label>Working days left</label><input type="number" id="fDays" min="1" max="31" step="1" style="min-width:110px" /></div>
+</section>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+  <div id="banner"></div>
+
+  <div id="vToday">
+    <div class="panel">
+      <div class="panel-head"><h3>Today's Build Plan <span class="unit">pcs / day</span></h3><span class="hint">highest priority first · balance ÷ working days left</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th>Group</th><th class="num">Forecast</th><th class="num">Required</th><th class="num">Produced</th><th class="num">Balance</th><th class="num">Daily target</th><th>Status</th></tr></thead>
+          <tbody id="tblToday"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="vSku" class="hidden">
+    <div class="panel">
+      <div class="panel-head">
+        <h3>SKU-wise Plan</h3>
+        <div class="srch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.5" y2="16.5"/></svg>
+          <input id="skuSearch" type="text" placeholder="Search item / code…" autocomplete="off" />
+          <button id="skuClear" hidden>&times;</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th>Group</th><th class="num">Forecast</th><th class="num">Opening</th><th class="num">Required</th><th class="num">Produced</th><th class="num">Achv %</th><th class="num">Balance</th><th class="num">Daily target</th><th>Status</th></tr></thead>
+          <tbody id="tblSku"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="vGroup" class="hidden">
+    <div class="cards">
+      <div class="panel span2">
+        <div class="panel-head"><h3>Plan by Product Group</h3><span class="hint">required vs produced vs balance</span></div>
+        <div class="chart-wrap tall"><canvas id="cGroup"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Balance Share</h3><span class="hint">where the remaining work sits</span></div>
+        <div class="chart-wrap"><canvas id="cGroupPie"></canvas></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-head"><h3>Group Rollup</h3><span class="hint">click a row to filter SKUs</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Product group</th><th class="num">SKUs</th><th class="num">Forecast</th><th class="num">Required</th><th class="num">Produced</th><th class="num">Achv %</th><th class="num">Balance</th><th class="num">Daily target</th></tr></thead>
+          <tbody id="tblGroup"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="vProgress" class="hidden">
+    <div class="cards">
+      <div class="panel span2">
+        <div class="panel-head"><h3>Cumulative Plan vs Actual</h3><span class="hint">are we ahead or behind the monthly requirement?</span></div>
+        <div class="chart-wrap tall"><canvas id="cCum"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Daily Output</h3><span class="hint">pcs per production day</span></div>
+        <div class="chart-wrap"><canvas id="cDaily"></canvas></div>
+      </div>
+      <div class="panel span2">
+        <div class="panel-head"><h3>Top Groups — Required vs Produced</h3><span class="hint">achievement by group</span></div>
+        <div class="chart-wrap"><canvas id="cAchv"></canvas></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="footer">Live from the ALEL planning workbook · auto-refresh 60s · <span id="lastUpdated">—</span></div>
+<div class="overlay" id="overlay"><div class="loader"><div class="ring"></div><p id="loadMsg">Loading plan…</p></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="production-plan.js" defer></script>
+</body>
+</html>
