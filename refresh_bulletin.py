@@ -1772,10 +1772,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       b.classList.toggle('hidden',!show);
       if(show){ n++; if(s.a===0) np++; else na++; }
     });
-    // Pulse SMV items (from the Production Dashboard) — shown only in pulse mode
+    // Pulse SMV items (from the Production Dashboard) — show in "all" and "pulse" views
     pulseBullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
-      if(show && !pulseMode) show=false;
+      if(show && activeSec!=='all' && activeSec!=='pulse') show=false;
       if(show && activeView!=='all') show=false;
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'', sc=b.getAttribute('data-sec')||'';
@@ -2095,6 +2095,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         cnt++;
       });
       var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=cnt;
+      var allCnt=document.querySelector('.chip[data-sec="all"] i'); if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
       apply();
     }).catch(function(){});
   }
