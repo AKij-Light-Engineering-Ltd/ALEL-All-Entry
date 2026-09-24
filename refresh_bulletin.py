@@ -617,6 +617,7 @@ def build_html(results, media_bytes, out_path=None):
         if sec_counts.get(k):
             lbl = {"OTHER": "Other"}.get(k, k)
             chip_html += f'<button class="chip" data-sec="{esc(k.lower())}">{esc(lbl)} Section<i>{sec_counts[k]}</i></button>'
+    chip_html += '<button class="chip chip-pulse" data-sec="pulse">Pulse SMV<i id="pulseCnt">…</i></button>'
 
     people = []
     people.append({"k": PREPARED_BY["name"], "l": PREPARED_BY["name"] + " (Prepared)"})
@@ -919,6 +920,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .aprv.a-prep{background:linear-gradient(135deg,#5b8def,#3b62c7);border-color:transparent;}
   .incomp{font-size:10px;font-weight:800;padding:4px 9px;border-radius:999px;color:#7a4a00;
           background:#fff0cf;border:1px solid #e8c37a;}
+  /* Pulse SMV cards */
+  .chip-pulse{background:linear-gradient(135deg,rgba(232,161,60,.18),rgba(255,107,53,.18));border-color:rgba(255,159,67,.4);color:#ffd9a8;}
+  .chip-pulse i{background:rgba(255,159,67,.3);color:#fff;}
+  .pulse-bulletin .pulse-head{background:linear-gradient(120deg,#1c1330,#2b1c4a 55%,#7a2d16);}
+  .pulse-obn{background:linear-gradient(135deg,#ff9f43,#ff6b35);color:#3a1200;}
+  .pulse-bulletin .pc-val{font-size:16px;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
+  .pulse-bulletin{border:1px dashed rgba(255,159,67,.35);}
+  .pulse-kpis .kpi{border:1px solid rgba(255,159,67,.22);}
   .kv-row{display:flex;gap:16px;padding:14px 20px 6px;align-items:flex-start;}
   .photo{flex:0 0 110px;width:110px;height:118px;border:1px solid var(--line);border-radius:12px;padding:6px;
          background:linear-gradient(180deg,#fff,var(--soft));position:relative;display:flex;align-items:center;justify-content:center;}
@@ -1346,6 +1355,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   try{ var s=localStorage.getItem('alel_login_v1'); if(s){ SESSION=JSON.parse(s); } }catch(e){}
 
   var bullets = Array.prototype.slice.call(document.querySelectorAll('.bulletin'));
+  var pulseBullets = [];
   var qEl=document.getElementById('q'), clr=document.getElementById('clr'),
       sugg=document.getElementById('sugg'), cntEl=document.getElementById('cnt'),
       cntP=document.getElementById('cntPend'), cntA=document.getElementById('cntApr'),
@@ -1745,8 +1755,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   function apply(){
     var t=(qEl.value||'').trim().toLowerCase();
     var n=0, np=0, na=0;
+    var pulseMode = activeSec==='pulse';
     bullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
+      if(show && pulseMode) show=false;
       if(show && activeSec!=='all' && b.getAttribute('data-sec')!==activeSec) show=false;
       var s=stOf(b);
       if(show && activeView==='pend' && s.a===1) show=false;
@@ -1759,6 +1771,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       }
       b.classList.toggle('hidden',!show);
       if(show){ n++; if(s.a===0) np++; else na++; }
+    });
+    // Pulse SMV items (from the Production Dashboard) — shown only in pulse mode
+    pulseBullets.forEach(function(b){
+      var show = SESSION ? canSee(b) : false;
+      if(show && !pulseMode) show=false;
+      if(show && activeView!=='all') show=false;
+      if(show && t){
+        var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'', sc=b.getAttribute('data-sec')||'';
+        show = nm.indexOf(t)>-1||cd.indexOf(t)>-1||sc.indexOf(t)>-1;
+      }
+      b.classList.toggle('hidden',!show);
+      if(show) n++;
     });
     cntEl.textContent=n; cntP.textContent=np; cntA.textContent=na;
     msg.style.display=n?'none':'block';
@@ -2000,6 +2024,81 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       edit.style.display = canEdit ? '' : 'none';
     });
   }
+
+  /* ---------- Pulse SMV (from the Production Dashboard master sheet) ---------- */
+  function parseCsvPulse(text){
+    var rows=[], row=[], f="", q=false;
+    for(var i=0;i<text.length;i++){
+      var c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+      else if(c==='"') q=true;
+      else if(c===","){ row.push(f); f=""; }
+      else if(c==="\n"){ row.push(f); rows.push(row); row=[]; f=""; }
+      else if(c!=="\r") f+=c;
+    }
+    if(f.length||row.length){ row.push(f); rows.push(row); }
+    return rows;
+  }
+  function pulseSection(pg, sec){
+    var s=String(sec||"").toLowerCase(), p=String(pg||"").toLowerCase();
+    if(p.indexOf("gss")>=0||p.indexOf("switch")>=0||p.indexOf("socket")>=0||p.indexOf("mcb")>=0||p.indexOf("piano")>=0||p.indexOf("holder")>=0||p.indexOf("plug")>=0||p.indexOf("db")>=0||p.indexOf("tape")>=0||p.indexOf("extension")>=0) return "gss";
+    if(p.indexOf("led")>=0||p.indexOf("light")>=0||p.indexOf("panel")>=0||p.indexOf("flood")>=0||p.indexOf("exhaust")>=0) return "led";
+    if(p.indexOf("hap")>=0||p.indexOf("iron")>=0||p.indexOf("kettle")>=0||p.indexOf("cooker")>=0||p.indexOf("stove")>=0) return "hap";
+    if(s.indexOf("switch")>=0||s.indexOf("socket")>=0) return "gss";
+    if(s.indexOf("light")>=0||s.indexOf("led")>=0) return "led";
+    if(s.indexOf("hap")>=0) return "hap";
+    return "hap";
+  }
+  function loadPulseSmv(){
+    var url="https://docs.google.com/spreadsheets/d/1HeKJ0XueH0WeAxLrJpNaNz_pvPuxRDElQmHcPd7QfOQ/gviz/tq?tqx=out:csv&sheet=Master%20Data";
+    fetch(url,{cache:"no-store"}).then(function(r){ return r.text(); }).then(function(txt){
+      var rows=parseCsvPulse(txt);
+      var hdr=(rows[0]||[]).map(function(h){ return String(h==null?"":h).trim(); });
+      function col(re){ for(var i=0;i<hdr.length;i++){ if(re.test(hdr[i])) return i; } return -1; }
+      var iCode=col(/item\s*code/i), iName=col(/item\s*name/i), iTp=col(/target\s*productivity/i), iSec=col(/^section$/i), iPg=col(/^pg$/i);
+      var host=listWrap||document.getElementById('listWrap'); if(!host||iCode<0||iName<0||iTp<0) return;
+      var cnt=0;
+      var icSmv='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
+      var icProd='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
+      var icCode='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18 22 12 16 6"/><path d="m8 6-6 6 6 6"/></svg>';
+      rows.slice(1).forEach(function(r){
+        var code=String(r[iCode]||"").trim();
+        var name=String(r[iName]||"").trim();
+        var tp=parseFloat(String(r[iTp]||"").replace(/[%,]/g,""));
+        if(!code||!name||!(tp>0)) return;
+        if(codeOf[code]) return;
+        var smv=60/tp;
+        var sec=pulseSection(String(r[iPg]||""), String(r[iSec]||""));
+        var b=document.createElement('section');
+        b.className='bulletin pulse-bulletin';
+        b.setAttribute('data-code',code);
+        b.setAttribute('data-name',name.toLowerCase());
+        b.setAttribute('data-sec',sec);
+        b.setAttribute('data-smv',smv);
+        b.setAttribute('data-pulse','1');
+        b.innerHTML =
+          '<div class="b-head pulse-head">'+
+            '<div class="b-brand">'+
+              '<div class="b-eyebrow">Production Dashboard &middot; Pulse SMV</div>'+
+              '<h2 class="b-title">'+escH(name)+'</h2>'+
+              '<div class="b-sub">Standard SMV from Target Productivity &middot; no Operation Bulletin yet</div>'+
+            '</div>'+
+            '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span></div>'+
+          '</div>'+
+          '<div class="kpis pulse-kpis">'+
+            '<div class="kpi k-smv"><div class="k-top">'+icSmv+'<span>Total SMV</span></div><div class="k-val">'+smv.toFixed(4)+'</div><div class="k-unit">min / pc</div></div>'+
+            '<div class="kpi k-prod"><div class="k-top">'+icProd+'<span>Target Productivity</span></div><div class="k-val">'+Math.round(tp).toLocaleString()+'</div><div class="k-unit">pcs / op-hr</div></div>'+
+            '<div class="kpi k-ops"><div class="k-top">'+icCode+'<span>Item Code</span></div><div class="k-val pc-val">'+escH(code)+'</div><div class="k-unit">SKU</div></div>'+
+          '</div>';
+        pulseBullets.push(b);
+        host.appendChild(b);
+        cnt++;
+      });
+      var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=cnt;
+      apply();
+    }).catch(function(){});
+  }
+  loadPulseSmv();
 })();
 </script>
 </body>
