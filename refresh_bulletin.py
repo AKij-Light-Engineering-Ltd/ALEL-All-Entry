@@ -2033,8 +2033,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
       else if(c==='"') q=true;
       else if(c===","){ row.push(f); f=""; }
-      else if(c==="\n"){ row.push(f); rows.push(row); row=[]; f=""; }
-      else if(c!=="\r") f+=c;
+      else if(c.charCodeAt(0)===10){ row.push(f); rows.push(row); row=[]; f=""; }
+      else if(c.charCodeAt(0)!==13) f+=c;
     }
     if(f.length||row.length){ row.push(f); rows.push(row); }
     return rows;
