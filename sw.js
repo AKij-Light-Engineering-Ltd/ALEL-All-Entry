@@ -8,7 +8,9 @@ const CACHE = "alel-opex-v3";
 const SHELL = [
   "./",
   "./index.html",
+  "./daily-app.html",
   "./manifest.webmanifest",
+  "./daily-app.webmanifest",
   "./icons/favicon-48.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

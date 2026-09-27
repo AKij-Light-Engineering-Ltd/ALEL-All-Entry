@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ALEL Daily Ops</title>
+<meta name="description" content="One app for your daily ALEL work — production plan, live dashboard, SMV bulletin and floor tools. Install it on your phone." />
+<meta name="theme-color" content="#070b14" />
+
+<!-- PWA / install -->
+<link rel="manifest" href="daily-app.webmanifest" />
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Daily Ops" />
+<meta name="application-name" content="ALEL Daily Ops" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#070b14; --bg2:#0b1120; --card:#101827; --card2:#131d31;
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.15);
+  --text:#e9eefb; --muted:#8ea0bd; --faint:#5f7091;
+  --good:#34d399; --warn:#f59e0b; --bad:#ef4444; --c1:#22d3ee; --c2:#6366f1; --c3:#a855f7;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh;
+  padding:calc(var(--sat) + 0px) 0 calc(var(--sab) + 90px);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 85% -10%,rgba(99,102,241,.16),transparent 60%),
+                   radial-gradient(700px 400px at -10% 110%,rgba(14,159,122,.13),transparent 55%);
+  background-attachment:fixed;
+}
+::selection{background:var(--c2);color:#fff}
+
+/* header */
+.hd{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:11px;padding:14px 16px calc(10px + var(--sat));
+  background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.hd .logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;font-weight:800;font-size:14px;box-shadow:0 0 24px -6px #12b886;flex:none}
+.hd .t{min-width:0}
+.hd h1{font-family:"Sora",sans-serif;font-size:17px;font-weight:800;letter-spacing:-.01em}
+.hd small{display:block;font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.hd .sp{margin-left:auto}
+.install-btn{display:none;align-items:center;gap:7px;padding:9px 14px;border-radius:11px;border:0;
+  background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.install-btn.show{display:inline-flex}
+.install-btn:active{transform:scale(.96)}
+
+/* hero */
+.hero{padding:20px 18px 6px}
+.hero .date{font-family:"Sora",sans-serif;font-size:15px;font-weight:800}
+.hero .sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+.hero .hint{font-size:12px;color:var(--faint);margin-top:2px}
+
+/* section label */
+.sec{display:flex;align-items:center;gap:9px;padding:18px 18px 10px}
+.sec h2{font-family:"Sora",sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sec .line{flex:1;height:1px;background:var(--border)}
+
+/* quick start */
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.qcard{position:relative;overflow:hidden;border-radius:18px;padding:18px 16px;color:#fff;border:1px solid var(--border);
+  min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;transition:transform .25s var(--ease)}
+.qcard:active{transform:scale(.97)}
+.qcard::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.14)}
+.qcard .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.18);margin-bottom:auto}
+.qcard .ic svg{width:18px;height:18px}
+.qcard b{font-family:"Sora",sans-serif;font-size:15px;font-weight:800;display:block;margin-top:10px}
+.qcard span{font-size:11.5px;opacity:.85;margin-top:3px}
+.qcard.plan{background:linear-gradient(135deg,#7c3aed,#4f46e5)}
+.qcard.live{background:linear-gradient(135deg,#0e9f7a,#0b7a5f)}
+
+/* tool grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.tool{position:relative;display:flex;flex-direction:column;gap:10px;padding:15px 15px;border-radius:16px;background:linear-gradient(160deg,var(--card),var(--card2));
+  border:1px solid var(--border);box-shadow:0 18px 40px -28px rgba(0,0,0,.9);cursor:pointer;transition:transform .25s var(--ease),border-color .25s}
+.tool:active{transform:scale(.97)}
+.tool .ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none}
+.tool .ic svg{width:18px;height:18px;color:#fff}
+.tool b{font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.tool p{font-size:11px;color:var(--muted);line-height:1.45}
+.tool .go{position:absolute;right:12px;top:14px;width:26px;height:26px;border-radius:9px;background:var(--card2);display:grid;place-items:center;color:var(--muted)}
+.tool .go svg{width:14px;height:14px}
+.tool .live-dot{position:absolute;right:12px;bottom:12px;width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(52,211,153,.18)}
+.c-blue .ic{background:linear-gradient(135deg,#22d3ee,#2563eb)} .c-indigo .ic{background:linear-gradient(135deg,#6366f1,#4338ca)}
+.c-purple .ic{background:linear-gradient(135deg,#a855f7,#7c3aed)} .c-green .ic{background:linear-gradient(135deg,#34d399,#0d9488)}
+.c-amber .ic{background:linear-gradient(135deg,#f59e0b,#d97706)} .c-red .ic{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+.c-pink .ic{background:linear-gradient(135deg,#f472b6,#db2777)}
+
+/* install banner */
+.install-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px calc(12px + var(--sab));
+  background:color-mix(in srgb,var(--bg2) 92%,transparent);backdrop-filter:blur(16px);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:12px}
+.install-bar.hide{display:none}
+.install-bar .ic{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#12b886,#0b7a5f);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex:none}
+.install-bar .tx{flex:1;min-width:0}
+.install-bar b{font-size:13px;font-weight:800}
+.install-bar span{display:block;font-size:11.5px;color:var(--muted)}
+.install-bar button{border:0;border-radius:11px;padding:11px 16px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;
+  background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;flex:none}
+.install-bar button:active{transform:scale(.96)}
+
+.foot{text-align:center;color:var(--faint);font-size:11px;padding:22px 16px 6px}
+@media(min-width:600px){ .quick,.grid{grid-template-columns:repeat(3,1fr);max-width:720px;margin:0 auto} .sec,.hero{max-width:720px;margin:0 auto;padding-left:16px;padding-right:16px} }
+</style>
+</head>
+<body>
+
+<header class="hd">
+  <div class="logo">ALEL</div>
+  <div class="t"><h1>Daily Ops</h1><small>Akij Light Engineering</small></div>
+  <div class="sp"></div>
+  <button class="install-btn" id="installBtn">⬇ Install</button>
+</header>
+
+<div class="hero">
+  <div class="date" id="dateLine">…</div>
+  <div class="sub">Everything you need for the shift — plan, live numbers, SMV &amp; floor tools.</div>
+  <div class="hint">Tap a card to open it · works offline once installed</div>
+</div>
+
+<div class="sec"><h2>Quick start</h2><span class="line"></span></div>
+<div class="quick">
+  <a class="qcard plan" href="production-plan.html">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V9h14z"/></svg></div>
+    <b>Production Plan</b><span>What to build today</span>
+  </a>
+  <a class="qcard live" href="daily-production-dashboard.html">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h4v8H3zm7-6h4v14h-4zm7 3h4v11h-4z"/></svg></div>
+    <b>Live Dashboard</b><span>OEE · output · defects</span>
+  </a>
+</div>
+
+<div class="sec"><h2>All tools</h2><span class="line"></span></div>
+<div class="grid">
+  <a class="tool c-blue" href="operation-bulletin.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h5v-2h-3V7h-2z"/></svg></div>
+    <b>Operation Bulletin</b><p>SMV standards &amp; work study</p>
+  </a>
+  <a class="tool c-indigo" href="oee-entry.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v3H4zm0 5h16v3H4zm0 5h10v3H4z"/></svg></div>
+    <b>OEE Entry</b><p>Log production &amp; downtime</p>
+  </a>
+  <a class="tool c-purple" href="qc-review.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 9.4 8 10 4.6-.6 8-5 8-10V6l-8-4z"/></svg></div>
+    <b>QC Review</b><p>Rejects &amp; first-pass yield</p>
+  </a>
+  <a class="tool c-green" href="5s-audit-form.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div>
+    <b>5S Audit</b><p>Score sort · set · shine</p>
+  </a>
+  <a class="tool c-amber" href="5s-dashboard.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h4v8H3zm7-6h4v14h-4zm7 3h4v11h-4z"/></svg></div>
+    <b>5S Dashboard</b><p>Sustainment trends</p>
+  </a>
+  <a class="tool c-red" href="ob-home.html">
+    <div class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 3 7v6c0 5 3.8 9.3 9 10 5.2-.7 9-5 9-10V7l-9-5z"/></svg></div>
+    <b>OB Sections</b><p>GSS · LED · HAP</p>
+  </a>
+</div>
+
+<div class="foot">ALEL Daily Ops · one app for the whole floor</div>
+
+<div class="install-bar" id="installBar">
+  <div class="ic">ALEL</div>
+  <div class="tx"><b>Install Daily Ops</b><span id="installHint">Get it on your home screen — works like a native app, offline too.</span></div>
+  <button id="installBarBtn">Install</button>
+</div>
+
+<script>
+/* ---------- date / greeting ---------- */
+(function(){
+  var d=new Date(), days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var el=document.getElementById('dateLine');
+  if(el) el.textContent = days[d.getDay()]+", "+d.getDate()+" "+mon[d.getMonth()]+" "+d.getFullYear();
+  // store last-open so a "back" feels natural
+  try{ localStorage.setItem('alel_daily_last', Date.now()); }catch(e){}
+})();
+
+/* ---------- install (PWA) ---------- */
+(function(){
+  var deferred=null, btn=document.getElementById('installBtn'), bar=document.getElementById('installBar'), barBtn=document.getElementById('installBarBtn');
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone = (navigator.standalone) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  function showPrompt(){
+    btn.classList.add('show');
+    if(!isStandalone) bar.classList.remove('hide');
+  }
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred=e; showPrompt();
+  });
+  function install(){
+    if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred=null; bar.classList.add('hide'); btn.classList.remove('show'); }); return; }
+    if(isIOS){ document.getElementById('installHint').textContent='iOS: tap Share ⬆ → “Add to Home Screen”.'; }
+    else { document.getElementById('installHint').textContent='Chrome/Edge: menu ⋮ → “Install app” / “Add to Home screen”.'; }
+  }
+  if(btn) btn.addEventListener('click', install);
+  if(barBtn) barBtn.addEventListener('click', install);
+  if(deferred===null && (isIOS||isStandalone)) { if(isIOS && !isStandalone) showPrompt(); }
+  // also show the bar after a short delay on first visit if not installed
+  setTimeout(function(){ if(!isStandalone && !deferred) bar.classList.remove('hide'); }, 2500);
+})();
+
+/* ---------- service worker ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
