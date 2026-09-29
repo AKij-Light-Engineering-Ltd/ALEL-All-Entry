@@ -71,6 +71,7 @@ function handle(p) {
     case "list":          return doList();
     case "request":       return doRequest(p);
     case "upsert":        return doUpsert(p);
+    case "setaccess":     return doSetAccess(p);
     case "resetpass":     return doResetPass(p);
     case "removeRequest": return doRemoveRequest(p);
     case "deluser":       return doDelUser(p);
@@ -133,13 +134,44 @@ function doUpsert(p) {
   var email = String(p.email || "").trim().toLowerCase();
   if (!email) return { ok: false, error: "No email" };
   var users = readUsers();
-  var rec   = { id: email, name: String(p.name || email).trim(), role: String(p.role || "user"), section: String(p.section || "") || "", hash: String(p.hash || "") };
+  var existing = null;
+  for (var i = 0; i < users.length; i++) if (users[i].id === email) existing = users[i];
+  var perms = (p.perms && p.perms.length) ? p.perms : (existing && existing.perms && existing.perms.length ? existing.perms : []);
+  var rec = {
+    id: email,
+    name: String(p.name || (existing && existing.name) || email).trim(),
+    role: String(p.role || (existing && existing.role) || "user"),
+    section: String(p.section || (existing && existing.section) || ""),
+    hash: String(p.hash || (existing && existing.hash) || ""),
+    perms: perms
+  };
   var found = false;
   users = users.map(function (u) {
     if (u.id === email) { found = true; return rec; }
     return u;
   });
   if (!found) users.push(rec);
+  writeUsers(users);
+  return { ok: true, user: rec };
+}
+
+/** Admin: update a user's role and/or module permissions (does not touch password). */
+function doSetAccess(p) {
+  var email = String(p.email || "").trim().toLowerCase();
+  if (!email) return { ok: false, error: "No email" };
+  var users = readUsers();
+  var found = false;
+  users = users.map(function (u) {
+    if (u.id === email) {
+      found = true;
+      if (p.role !== undefined && p.role !== null) u.role = String(p.role);
+      if (p.section !== undefined && p.section !== null) u.section = String(p.section);
+      if (p.perms !== undefined && p.perms !== null) u.perms = Array.isArray(p.perms) ? p.perms : [];
+      return u;
+    }
+    return u;
+  });
+  if (!found) return { ok: false, error: "No such user" };
   writeUsers(users);
   return { ok: true };
 }
@@ -226,9 +258,14 @@ function readUsers() {
   for (var i = 0; i < data.length; i++) {
     var row = data[i];
     if (!row[0]) continue;
-    users.push({ id: String(row[0]), name: String(row[1]), role: String(row[2]), section: String(row[3] || ""), hash: String(row[4]) });
+    users.push({ id: String(row[0]), name: String(row[1]), role: String(row[2]), section: String(row[3] || ""), hash: String(row[4]), perms: parsePerms(row[5]) });
   }
   return users;
+}
+
+function parsePerms(v) {
+  if (!v) return [];
+  try { var a = JSON.parse(String(v)); return Array.isArray(a) ? a : []; } catch (e) { return []; }
 }
 
 function writeUsers(users) {
@@ -236,9 +273,9 @@ function writeUsers(users) {
   var sheet = ss_().getSheetByName(USERS_SHEET);
   sheet.clearContents();
   var rows = users.map(function (u) {
-    return [u.id, u.name, u.role, u.section || "", u.hash];
+    return [u.id, u.name, u.role, u.section || "", u.hash, (u.perms && u.perms.length) ? JSON.stringify(u.perms) : ""];
   });
-  if (rows.length) sheet.getRange(1, 1, rows.length, 5).setValues(rows);
+  if (rows.length) sheet.getRange(1, 1, rows.length, 6).setValues(rows);
 }
 
 function readRequests() {
