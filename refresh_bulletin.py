@@ -1675,7 +1675,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   /* ---------- role helpers ---------- */
   function canSee(b){
     if(!SESSION) return false;
-    if(SESSION.role==='admin'||SESSION.role==='prepared') return true;
+    if(SESSION.role==='admin'||SESSION.role==='prepared'||SESSION.role==='viewer'||SESSION.role==='operator') return true;
     if(SESSION.role==='approver') return true;            // sees all, but filters to pending in view
     if(SESSION.role==='checker'){
       return b.getAttribute('data-sec').toUpperCase()===SESSION.section.toUpperCase();
