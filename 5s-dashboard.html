@@ -106,7 +106,7 @@
     <div class="phead"><span>AUDIT DETAILS</span><span class="hint" id="editHint">✏️ Edit / 🗑 Delete — record thik korte parben</span></div>
     <div class="pbody" id="auditsBody"><div class="nf">Loading…</div></div>
   </div>
-  <div class="panel"><div class="phead">CATEGORY BREAKDOWN (SORT → SUSTAIN)</div><div class="pbody" id="catBody"><div class="nf">Loading…</div></div></div>
+  <div class="panel"><div class="phead">SECTION-WISE IMPROVEMENT SCOPE (S1 → S5)</div><div class="pbody" id="catBody"><div class="nf">Loading…</div></div></div>
 
   <div class="foot">5S — Sort, Set in Order, Shine, Standardize, Sustain · <b>ALEL Operational Excellence</b></div>
 </div>
@@ -160,6 +160,24 @@ const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov',
 const EDITOR_EMAIL='md.marufhossain@akijlightengineering.com';
 const EDITOR_NAME='Md. Maruf Hossain';
 let ACCESS={checked:false, ok:false, msg:''};
+
+/* ==== SECTION-WISE IMPROVEMENT SCOPE — criteria → action map ==== */
+const TARGET=85;
+const ACTION={
+  '1.1':'Daily red-tag of unnecessary items — scrap / obsolete bin clear',
+  '1.2':'Red-tag corner + weekly disposal review with record',
+  '1.3':'Mark & keep aisles / fire exits clear (weekly walk-through)',
+  '2.1':'Label every tool / jig location + shadow board at machine',
+  '2.2':'Refresh floor markings (lanes, WIP, hazard) & enforce',
+  '2.3':'Point-of-use storage in correct sequence',
+  '3.1':'Daily machine cleaning + oil-leak fix loop',
+  '3.2':'Display cleaning schedule / checklist at each station + daily sign-off',
+  '4.1':'Refresh SOP / label / colour-code displays & keep current',
+  '4.2':'Action log with owner + due date for every finding',
+  '5.1':'Operator-level 5S briefing — each operator explains own station',
+  '5.2':'Fix weekly audit cadence with a named auditor roster'
+};
+const SECTIONS={ '1':'1S · Sort', '2':'2S · Set in Order', '3':'3S · Shine', '4':'4S · Standardize', '5':'5S · Sustain' };
 
 /* ==== EDIT BACKEND =====================================================
    Apps Script web-app (/exec) URL. Deploy korar por ei line e paste korun,
@@ -230,6 +248,7 @@ function n(x){const v=parseFloat(x);return isNaN(v)?0:v;}
 function asDate(s){const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s);}
 function inR(d,s,e){return d>=s&&d<=e;}
 function totalOf(o){let t=0;CRIT.forEach(c=>t+=n(o[c.key]));return t;}
+function short(s,nn){ s=String(s==null?'':s); if(s.length<=nn) return s; const cut=s.slice(0,nn); const i=cut.lastIndexOf(' '); return (i>18?cut.slice(0,i):cut)+'…'; }
 
 function render(all){
   const sd=new Date(document.getElementById('startDate').value), ed=new Date(document.getElementById('endDate').value);
@@ -290,18 +309,48 @@ function render(all){
   if(rowsShown.length>60) tab+='<div style="font-size:10.5px;color:var(--sub);margin-top:6px">Showing latest 60 of '+rowsShown.length+' audits — search box diye specific audit khojun.</div>';
   document.getElementById('auditsBody').innerHTML=tab;
 
-  // category breakdown
-  const groups={'1.':'Sort (S1)','2.':'Set in Order (S2)','3.':'Shine (S3)','4.':'Standardize (S4)','5.':'Sustain (S5)'};
-  let lastAudit = recent[0] && recent[0].rec;
-  let catHtml2='<table><tr><th>Pillar</th><th style="text-align:right">Score %</th></tr>';
-  Object.keys(groups).forEach(prefix=>{
-    let total=0,cnt=0;
-    if(lastAudit){ Object.keys(lastAudit).forEach(h=>{ if(h.startsWith(prefix)&&!/Remarks/.test(h)){const v=n(lastAudit[h]);if(v){total+=v;cnt++;}} }); }
-    const p=cnt?Math.round(total/cnt/2.4*100):0;
-    catHtml2+='<tr><td>'+groups[prefix]+'</td><td style="text-align:right">'+(cnt?p+'%':'—')+'</td></tr>';
+  // ===== SECTION-WISE IMPROVEMENT SCOPE (S1 -> S5) =====
+  const sectRows=[];
+  Object.keys(SECTIONS).forEach(d=>{
+    const cs=CRIT.filter(c=>c.key.charAt(0)===d);
+    // audit-wise average (header er sathe consistent): protiti audit er section % er mean
+    let sumPct=0, cntA=0;
+    list.forEach(a=>{
+      let s=0,k=0; cs.forEach(c=>{const v=n(a[c.key]); if(v){s+=v;k++;}});
+      if(k){ sumPct += s/(k*3)*100; cntA++; }
+    });
+    const pct=cntA?Math.round(sumPct/cntA*10)/10:0;
+    let worst=null;
+    cs.forEach(c=>{
+      let s=0,k=0; const ones={};
+      list.forEach(a=>{const v=n(a[c.key]); if(v){s+=v;k++; if(v===1){const ar=a['Floor / Area']||'—'; ones[ar]=(ones[ar]||0)+1;}}});
+      const p=k?Math.round(s/k/3*1000)/10:0;
+      if(!worst||p<worst.pct) worst={key:c.key,pct:p,num:c.num,text:c.text,areas:Object.keys(ones).sort()};
+    });
+    sectRows.push({ d:d, name:SECTIONS[d], pct:pct, gap:Math.round((TARGET-pct)*10)/10, worst:worst, audits:list.length });
   });
-  catHtml2+='</table><div style="font-size:10px;color:var(--sub)">Pillar % = avg question score ÷ max 2.4 · from latest audit ('+(lastAudit?esc(String(lastAudit['Audit Date']).slice(0,10)):'n/a')+')</div>';
-  document.getElementById('catBody').innerHTML=catHtml2;
+  // plant total = audit gulo r Score % er mean (sheet er sathe hubohu mile)
+  const plantTot = list.length ? Math.round(list.reduce((s,a)=>s+n(a['Score %']),0)/list.length*10)/10 : 0;
+
+  let sh='<table><tr><th>Section</th><th class="num">Score</th><th class="num">Gap to '+TARGET+'%</th><th>Weak point (lowest question)</th><th>Weak areas</th><th>Improvement scope</th><th style="width:38px">Pri</th></tr>';
+  sectRows.forEach(s=>{
+    const pri=s.gap>=25?'P1':s.gap>=20?'P2':'P3';
+    const pric=pri==='P1'?'#c8402c':pri==='P2'?'#e0972a':'#1f8a53';
+    const sc=s.pct>=TARGET?'#1f8a53':s.pct>=60?'#e0972a':'#c8402c';
+    sh+='<tr><td><b>'+esc(s.name)+'</b></td>'+
+        '<td class="num"><b style="color:'+sc+'">'+s.pct+'%</b></td>'+
+        '<td class="num">−'+s.gap+'</td>'+
+        '<td style="font-size:11.5px"><b>'+esc(s.worst.num)+'</b> '+esc(short(s.worst.text,52))+' <span style="color:#5b6779">('+s.worst.pct+'%)</span></td>'+
+        '<td style="font-size:11px">'+(s.worst.areas.length?esc(s.worst.areas.join(', ')):'—')+'</td>'+
+        '<td style="font-size:11.5px">'+esc(ACTION[s.worst.num]||'')+'</td>'+
+        '<td style="text-align:center"><b style="color:'+pric+'">'+pri+'</b></td></tr>';
+  });
+  const focusOrder=sectRows.slice().sort((a,b)=>b.gap-a.gap).map(s=>s.name.split(' ')[0]).join(' → ');
+  sh+='<tr style="background:#f4f7fb"><td><b>PLANT TOTAL</b></td><td class="num"><b style="color:'+(plantTot>=TARGET?'#1f8a53':plantTot>=60?'#e0972a':'#c8402c')+'">'+plantTot+'%</b></td>'+
+      '<td class="num">−'+Math.round((TARGET-plantTot)*10)/10+'</td>'+
+      '<td colspan="4" style="font-size:11px"><b>Focus order</b> (gap beshi theke kom): '+esc(focusOrder)+'</td></tr>';
+  sh+='</table><div style="font-size:10px;color:var(--sub);margin-top:5px">Selected date range er <b>sob audit</b> theke · Score = section er question gulo ÷ max (3 protiti question) · Target '+TARGET+'% · <b>Pri</b>: P1 = gap ≥ 25 pts, P2 = 20–25, P3 = &lt; 20 · “Weak areas” = je area gulo oi question e 1 peyeche</div>';
+  document.getElementById('catBody').innerHTML = list.length ? sh : '<div class="nf">No audits in selected range</div>';
 }
 
 /* ================= EDIT / DELETE ================= */
