@@ -14,8 +14,10 @@
  *    2) Save (💾) → Run ekbar `pingTest` → Google permission "Allow"
  *    3) Deploy → New deployment → type: Web app
  *         Execute as        : Me (your email)
- *         Who has access    : Anyone
+ *         Who has access    : Anyone with a Google account     <-- ei ta din
  *       → Deploy → copy the /exec URL
+ *       ("Anyone with a Google account" dile script caller er ASOL Google account
+ *        check kore, tai EDITORS list er baire keu edit korte parbe na ✓)
  *    4) Oi /exec URL ta dashboard e paste korun:
  *         https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/5s-dashboard.html
  *       → ✏️ Edit → setup box e URL paste → "Save URL"
@@ -34,12 +36,16 @@ var SCORE_RE   = /^\d\.\d\s/;      // "1.1 ..." = score column
 var REMARK_RE  = /Remarks/i;
 var MAX_PER_Q  = 3;                // protiti question er max score
 
-// Edit permission (khali array = sob allowed, tabe log e record thakbe).
-// Specific manush der jonno niche email gulo boshie din:
+// ------------------------- EDIT PERMISSION ----------------------------------
+// Ei list er email chara keu edit/delete korte parbe na (server-side check).
+// Khali array = sob allowed (recommended na).
 var EDITORS = [
-  // 'md.marufhossain@akijlightengineering.com',
-  // 'jhumour@akijlightengineering.com'
+  'md.marufhossain@akijlightengineering.com'
 ];
+
+// Deployment access "Anyone with a Google account" dile script caller er asol
+// Google account o check kore (Session.getActiveUser) — eta sob theke strong.
+// "Anyone" dile caller account paowa jay na, tai payload er email check hoy.
 
 // ------------------------- WEB ENTRY ----------------------------------------
 function doGet(e) {
@@ -48,6 +54,7 @@ function doGet(e) {
   var res;
   try {
     if (action === 'verify')      res = doVerify_(p);
+    else if (action === 'whoami') res = doWhoami_(p);
     else if (action === 'ping')   res = doPing_();
     else                          res = { ok: false, error: 'Unknown GET action: ' + action };
   } catch (err) {
@@ -94,7 +101,7 @@ function logSheet_() {
   var sh = ss.getSheetByName(LOG_TAB);
   if (!sh) {
     sh = ss.insertSheet(LOG_TAB);
-    sh.appendRow(['When', 'Action', 'Row', 'By (name)', 'By (email)', 'Key (email | date | floor)', 'Changes']);
+    sh.appendRow(['When', 'Action', 'Row', 'By (name)', 'By (email)', 'Verified via', 'Key (email | date | floor)', 'Changes']);
     sh.getRange('A1:G1').setFontWeight('bold');
   }
   return sh;
@@ -108,12 +115,39 @@ function day_(v) {
   var m = String(v).match(/(\d{4})-(\d{2})-(\d{2})/);
   return m ? (m[1] + '-' + m[2] + '-' + m[3]) : String(v).trim();
 }
-function allowed_(p) {
-  if (!EDITORS || !EDITORS.length) return true;
-  var em = norm_((p.by && p.by.email) || '');
-  if (!em) return false;
-  for (var i = 0; i < EDITORS.length; i++) if (norm_(EDITORS[i]) === em) return true;
-  return false;
+/** Caller er asol Google account (deployment "Anyone with a Google account" hole). */
+function callerEmail_() {
+  try {
+    var e = Session.getActiveUser().getEmail();
+    return e ? String(e).trim().toLowerCase() : '';
+  } catch (err) { return ''; }
+}
+
+/**
+ * Edit permission gate.
+ *  1) Google session er email ache  -> oi ta-i bichar hobe (sob theke strong)
+ *  2) session nei (deployment "Anyone") -> payload er email check
+ * Return: { ok, via, email, error }
+ */
+function editorOk_(p) {
+  var list = (EDITORS || []).map(norm_);
+  if (!list.length) return { ok: true, via: 'open', email: '(EDITORS list khali)' };
+
+  var sess = callerEmail_();
+  if (sess) {
+    if (list.indexOf(sess) >= 0) return { ok: true, via: 'google-session', email: sess };
+    return {
+      ok: false, via: 'google-session', email: sess,
+      error: 'Ei Google account (' + sess + ') er edit permission nei. Only ' + EDITORS.join(', ') + ' — oi account diye login kore abar chesta korun.'
+    };
+  }
+
+  var claim = norm_((p && p.by && p.by.email) || '');
+  if (claim && list.indexOf(claim) >= 0) return { ok: true, via: 'email', email: claim };
+  return {
+    ok: false, via: 'email', email: claim || '(khali)',
+    error: 'Edit permission nei — only ' + EDITORS.join(', ') + ' ei dashboard edit korte parbe.'
+  };
 }
 
 /** Row khoja: row number age (key mile kina check kore), na mille key diye scan. */
@@ -150,6 +184,19 @@ function doPing_() {
   return { ok: true, info: 'ALEL 5S edit backend', tab: TAB_NAME, rows: sh.getLastRow(), editors: EDITORS };
 }
 
+/** Caller er permission jiggasha — dashboard modal kholar somoy ei action call kore. */
+function doWhoami_(p) {
+  var g = editorOk_(p);
+  return {
+    ok: true,
+    allowed: g.ok,
+    caller: g.email,
+    via: g.via,
+    editors: EDITORS,
+    error: g.ok ? '' : g.error
+  };
+}
+
 function doVerify_(p) {
   var sh = sheet_();
   var values = sh.getDataRange().getValues();
@@ -160,7 +207,8 @@ function doVerify_(p) {
 }
 
 function doUpdate_(p) {
-  if (!allowed_(p)) return { ok: false, error: 'Ei email er edit permission nei (EDITORS list dekho)' };
+  var gate = editorOk_(p);
+  if (!gate.ok) return { ok: false, code: 'FORBIDDEN', error: gate.error, caller: gate.email };
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(25000);
@@ -203,7 +251,8 @@ function doUpdate_(p) {
 
     logSheet_().appendRow([
       new Date(), 'UPDATE', idx + 1,
-      (p.by && p.by.name) || '', (p.by && p.by.email) || '',
+      (p.by && p.by.name) || '', gate.email,
+      gate.via,
       [day_(row[head.indexOf('Email')]), day_(row[head.indexOf('Audit Date')]), row[head.indexOf('Floor / Area')]].join(' | '),
       changed.join(' ; ') || '(no value change)'
     ]);
@@ -217,7 +266,8 @@ function doUpdate_(p) {
 }
 
 function doDelete_(p) {
-  if (!allowed_(p)) return { ok: false, error: 'Ei email er edit permission nei (EDITORS list dekho)' };
+  var gate = editorOk_(p);
+  if (!gate.ok) return { ok: false, code: 'FORBIDDEN', error: gate.error, caller: gate.email };
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(25000);
@@ -230,7 +280,8 @@ function doDelete_(p) {
     var snap = rowToObj_(head, values[idx]);
     logSheet_().appendRow([
       new Date(), 'DELETE', idx + 1,
-      (p.by && p.by.name) || '', (p.by && p.by.email) || '',
+      (p.by && p.by.name) || '', gate.email,
+      gate.via,
       [snap['Email'], day_(snap['Audit Date']), snap['Floor / Area']].join(' | '),
       'Total=' + snap['Total Score'] + ' Score%=' + snap['Score %'] + ' Auditor=' + snap['Auditor Name']
     ]);

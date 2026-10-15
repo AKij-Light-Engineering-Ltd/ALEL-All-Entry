@@ -126,11 +126,10 @@
         <button class="btn ghost" id="epSave" style="margin-top:6px">Save URL</button>
       </div>
       <div class="byrow">
-        <span>✍️ <b>Edited by</b></span>
-        <input type="text" id="byName" placeholder="Your name">
-        <input type="text" id="byEmail" placeholder="Your email">
-        <span style="font-size:10.5px">(edit log e joma hobe — audit trail)</span>
+        🔒 <b>Edit access:</b> only <b>md.marufhossain@akijlightengineering.com</b>
+        <span style="font-size:10.5px">— editing as <b>Md. Maruf Hossain</b> · protita change “5S Edit Log” e joma hobe</span>
       </div>
+      <div class="byrow" id="edAccess" style="background:#f6f8fb">🔎 Edit permission check hocche…</div>
       <div class="mgrid" id="mHead"></div>
       <div id="mCrit"></div>
       <label class="mfield" style="margin-top:6px">Overall Auditor Comments</label>
@@ -152,6 +151,12 @@
 const SHEET_ID='1iVlAdl9bcmZE1Uk_24z7NUl4FtivFTa2h7wOI1T8T0w';
 const GID='1035222766';
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ==== EDIT PERMISSION — ei email chara keu edit/delete korte parbe na ====
+   (server side eo check hoy: Apps Script er EDITORS list)                */
+const EDITOR_EMAIL='md.marufhossain@akijlightengineering.com';
+const EDITOR_NAME='Md. Maruf Hossain';
+let ACCESS={checked:false, ok:false, msg:''};
 
 /* ==== EDIT BACKEND =====================================================
    Apps Script web-app (/exec) URL. Deploy korar por ei line e paste korun,
@@ -297,20 +302,38 @@ function render(all){
 function findRow(row){ return ALL.filter(a=>a.__row===row)[0]; }
 
 function byValues(){
-  return {
-    name:(document.getElementById('byName').value||'').trim(),
-    email:(document.getElementById('byEmail').value||'').trim()
-  };
+  return { name:EDITOR_NAME, email:EDITOR_EMAIL };
 }
-function rememberBy(){
-  const b=byValues();
-  try{ localStorage.setItem('alel5sByName',b.name); localStorage.setItem('alel5sByEmail',b.email); }catch(e){}
-}
-function loadBy(){
+/* ---- edit permission check (modal kholar somoy) ---- */
+async function checkAccess(){
+  const el=document.getElementById('edAccess');
+  const epv=ep();
+  ACCESS={checked:true, ok:false, msg:''};
+  document.getElementById('mSave').disabled=true;
+  document.getElementById('mDelete').disabled=true;
+  if(!epv){
+    el.innerHTML='⚙️ <b>Backend URL set kora nei</b> — upore setup box e /exec URL paste kore “Save URL” chapun.';
+    el.style.color='#7a5a10';
+    return;
+  }
+  el.innerHTML='🔎 Edit permission check hocche…'; el.style.color='#5b6779';
   try{
-    document.getElementById('byName').value=localStorage.getItem('alel5sByName')||'';
-    document.getElementById('byEmail').value=localStorage.getItem('alel5sByEmail')||'';
-  }catch(e){}
+    const r=await jsonp(epv+'?action=whoami&email='+encodeURIComponent(EDITOR_EMAIL));
+    if(r && r.ok){
+      ACCESS.ok=!!r.allowed;
+      ACCESS.msg=r.allowed?('Access verified — '+(r.caller||EDITOR_EMAIL)+(r.via==='google-session'?' (Google account)':'')):(r.error||'Edit permission nei');
+      el.innerHTML = r.allowed
+        ? ('🔓 <b>Access verified</b> — '+esc(r.caller||EDITOR_EMAIL)+(r.via==='google-session'?' <span style="font-size:10px">(Google account diye verified)</span>':''))
+        : ('⛔ <b>'+esc(r.error||'Edit permission nei')+'</b>');
+      el.style.color = r.allowed? '#1f8a53':'#c8402c';
+    } else {
+      el.innerHTML='⚠ Permission check hoy ni — backend response thik na'; el.style.color='#e0972a';
+    }
+  }catch(e){
+    el.innerHTML='⚠ Permission check hoy ni (backend reachable na)'; el.style.color='#e0972a';
+  }
+  document.getElementById('mSave').disabled=!ACCESS.ok;
+  document.getElementById('mDelete').disabled=!ACCESS.ok;
 }
 
 function openEdit(row){
@@ -319,7 +342,7 @@ function openEdit(row){
   document.getElementById('mTitle').textContent='Edit 5S audit — '+String(a['Audit Date']).slice(0,10)+' · '+(a['Floor / Area']||'');
   document.getElementById('setupBox').className='setup'+(ep()?'':' on');
   document.getElementById('epInput').value=ep();
-  loadBy();
+  checkAccess();
 
   // header fields
   const hf=[['Email','email'],['Auditor Name','text'],['Floor / Area','text'],['Audit Date','date'],['Shift','text']];
@@ -374,8 +397,9 @@ function jsonp(url){
 async function saveEdit(){
   const epv=ep();
   if(!epv){ toast('Backend URL set koro (setup box) — othoba “Copy row” diye Sheet e paste koro','bad'); return; }
+  if(!ACCESS.checked) await checkAccess();
+  if(!ACCESS.ok){ toast('⛔ '+(ACCESS.msg||'Edit permission nei'),'bad'); return; }
   const by=byValues();
-  if(!by.name){ toast('“Edited by” name din — audit trail er jonno','bad'); return; }
   const row=CUR.row, vals=collect();
   const key={email:vals['Email']||'',date:(vals['Audit Date']||'').slice(0,10),floor:vals['Floor / Area']||''};
   // keep the original key of the record so the backend can find the row even if fields changed
@@ -389,13 +413,12 @@ async function saveEdit(){
     await new Promise(r=>setTimeout(r,2200));
     let vv=null;
     try{ vv=await jsonp(epv+'?action=verify&row='+row); }catch(e){}
-    rememberBy();
     if(vv&&vv.ok&&vv.values){
       const now=String(vv.values['Score %']||''), nowT=String(vv.values['Total Score']||'');
       if(now===vals['Score %']&&nowT===vals['Total Score']){
         toast('✅ Save hoye geche — '+vals['Total Score']+'/'+vals['Max Score']+' ('+vals['Score %']+'%)','ok');
       }else{
-        toast('⚠ Save request geche, kintu sheet e ekhono purono value — 1 min por Refresh koro','ok');
+        toast('⚠ Save hoy ni — value change hoy ni. Karon: edit permission nei, othoba sheet update hote 1 min lagche','bad');
       }
     }else{
       toast('✅ Save request pathano hoyeche (verify hoy ni) — 1 min por Refresh koro','ok');
@@ -414,7 +437,9 @@ async function deleteRow(row){
   if(!confirm('Delete this 5S audit?\n\n'+String(a['Audit Date']).slice(0,10)+' · '+(a['Floor / Area']||'')+' · '+(a['Auditor Name']||'')+'\n\nEi row ta sheet theke delete hoye jabe (log thake).')) return;
   const epv=ep();
   if(!epv){ toast('Backend URL set koro — othoba Sheet theke manually delete koro','bad'); return; }
-  const by=byValues(); if(!by.name){ toast('“Edited by” name din','bad'); return; }
+  if(!ACCESS.checked) await checkAccess();
+  if(!ACCESS.ok){ toast('⛔ '+(ACCESS.msg||'Delete permission nei'),'bad'); return; }
+  const by=byValues(); if(!by.email){ toast('Edit permission nei','bad'); return; }
   const rec=a;
   const okKey={email:rec['Email']||'',date:String(rec['Audit Date']||'').slice(0,10),floor:rec['Floor / Area']||''};
   try{
