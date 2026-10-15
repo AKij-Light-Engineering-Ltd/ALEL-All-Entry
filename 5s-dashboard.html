@@ -124,6 +124,9 @@
         Deploy kora <code>/exec</code> URL ta niche paste kore <b>Save URL</b> chapun (ekbar, ei browser e save thakbe)।
         <input type="text" id="epInput" placeholder="https://script.google.com/macros/s/AKfy.../exec">
         <button class="btn ghost" id="epSave" style="margin-top:6px">Save URL</button>
+        <input type="text" id="keyInput" placeholder="Access code (script e EDIT_KEY dile ekbare dite hoy)">
+        <button class="btn ghost" id="keySave" style="margin-top:6px">Save code</button>
+        <div style="font-size:10.5px;margin-top:6px">Ei duita ekbar dile oi browser theke edit hobe — onno karo browser e ✏️/🗑 button-i asbe na ✓</div>
       </div>
       <div class="byrow">
         🔒 <b>Edit access:</b> only <b>md.marufhossain@akijlightengineering.com</b>
@@ -163,6 +166,7 @@ let ACCESS={checked:false, ok:false, msg:''};
    othoba page theke ekbar "Save URL" korle browser e save thakbe.        */
 const EDIT_ENDPOINT='';
 function ep(){ return (EDIT_ENDPOINT||localStorage.getItem('alel5sEditEndpoint')||'').trim(); }
+function edKey(){ try{ return (localStorage.getItem('alel5sEditKey')||'').trim(); }catch(e){ return ''; } }
 /* key order = sheet column order (copy/paste er jonno) */
 
 function parseCSV(text){
@@ -270,15 +274,17 @@ function render(all){
   });
   document.getElementById('areaBody').innerHTML=list.length?areaHtml:'<div class="nf">No audits in selected range</div>';
 
-  // ---- AUDIT DETAILS table (with edit / delete) ----
+  // ---- AUDIT DETAILS table (Edit/Delete column sudhu permitted user dekhabe) ----
+  const canEdit = !!ACCESS.ok;
+  document.getElementById('editHint').textContent = canEdit ? '✏️ Edit / 🗑 Delete — record thik korte parben' : '';
   const q=(document.getElementById('searchBox').value||'').trim().toLowerCase();
   let rowsShown=recent;
   if(q) rowsShown=recent.filter(x=>((x.auditor+' '+x.area+' '+x.date+' '+x.shift+' '+x.email).toLowerCase().indexOf(q)>=0));
-  let tab='<table><tr><th>Date</th><th>Area</th><th>Score</th><th>Status</th><th style="width:96px">Action</th></tr>';
+  let tab='<table><tr><th>Date</th><th>Area</th><th>Score</th><th>Status</th>'+(canEdit?'<th style="width:96px">Action</th>':'')+'</tr>';
   rowsShown.slice(0,60).forEach(a=>{
     tab+='<tr><td>'+esc(a.date.slice(0,10))+'</td><td>'+esc(a.area)+'</td><td><b>'+a.score+'%</b></td>'+
       '<td><span class="pill" style="background:'+(a.score>=85?'#e3f4ea;color:var(--green)':a.score>=60?'#fdeee0;color:var(--amber)':'#fbe4e1;color:var(--red)')+'">'+(a.score>=85?'Good':a.score>=60?'Average':'Needs work')+'</span></td>'+
-      '<td><button class="abtn" data-edit="'+a.rec.__row+'">✏️ Edit</button><button class="abtn del" data-del="'+a.rec.__row+'">🗑</button></td></tr>';
+      (canEdit?('<td><button class="abtn" data-edit="'+a.rec.__row+'">✏️ Edit</button><button class="abtn del" data-del="'+a.rec.__row+'">🗑</button></td>'):'')+'</tr>';
   });
   tab+='</table>';
   if(rowsShown.length>60) tab+='<div style="font-size:10.5px;color:var(--sub);margin-top:6px">Showing latest 60 of '+rowsShown.length+' audits — search box diye specific audit khojun.</div>';
@@ -318,7 +324,8 @@ async function checkAccess(){
   }
   el.innerHTML='🔎 Edit permission check hocche…'; el.style.color='#5b6779';
   try{
-    const r=await jsonp(epv+'?action=whoami&email='+encodeURIComponent(EDITOR_EMAIL));
+    const k=edKey();
+    const r=await jsonp(epv+'?action=whoami&email='+encodeURIComponent(EDITOR_EMAIL)+(k?('&code='+encodeURIComponent(k)):''));
     if(r && r.ok){
       ACCESS.ok=!!r.allowed;
       ACCESS.msg=r.allowed?('Access verified — '+(r.caller||EDITOR_EMAIL)+(r.via==='google-session'?' (Google account)':'')):(r.error||'Edit permission nei');
@@ -334,6 +341,7 @@ async function checkAccess(){
   }
   document.getElementById('mSave').disabled=!ACCESS.ok;
   document.getElementById('mDelete').disabled=!ACCESS.ok;
+  if(typeof ALL!=='undefined' && ALL && ALL.length) render(ALL);
 }
 
 function openEdit(row){
@@ -342,6 +350,7 @@ function openEdit(row){
   document.getElementById('mTitle').textContent='Edit 5S audit — '+String(a['Audit Date']).slice(0,10)+' · '+(a['Floor / Area']||'');
   document.getElementById('setupBox').className='setup'+(ep()?'':' on');
   document.getElementById('epInput').value=ep();
+  document.getElementById('keyInput').value=edKey();
   checkAccess();
 
   // header fields
@@ -409,7 +418,7 @@ async function saveEdit(){
   try{
     await fetch(epv,{method:'POST',mode:'no-cors',credentials:'include',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'update',row:row,key:okKey,by:by,values:vals})});
+      body:JSON.stringify({action:'update',row:row,key:okKey,code:edKey(),by:by,values:vals})});
     await new Promise(r=>setTimeout(r,2200));
     let vv=null;
     try{ vv=await jsonp(epv+'?action=verify&row='+row); }catch(e){}
@@ -445,7 +454,7 @@ async function deleteRow(row){
   try{
     await fetch(epv,{method:'POST',mode:'no-cors',credentials:'include',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'delete',row:row,key:okKey,by:by})});
+      body:JSON.stringify({action:'delete',row:row,key:okKey,code:edKey(),by:by})});
     toast('🗑 Delete request pathano hoyeche — 1 min por Refresh koro','ok');
     setTimeout(load,2500);
   }catch(e){ toast('Delete fail: '+e.message,'bad'); }
@@ -474,6 +483,13 @@ document.getElementById('epSave').addEventListener('click',()=>{
   localStorage.setItem('alel5sEditEndpoint',u);
   toast('✅ Backend URL save holo','ok');
   document.getElementById('setupBox').className='setup';
+  checkAccess();
+});
+document.getElementById('keySave').addEventListener('click',()=>{
+  const k=(document.getElementById('keyInput').value||'').trim();
+  try{ localStorage.setItem('alel5sEditKey',k); }catch(e){}
+  toast(k?'✅ Access code save holo':'Access code muche fela holo','ok');
+  checkAccess();
 });
 document.getElementById('auditsBody').addEventListener('click',e=>{
   const ed=e.target.closest('[data-edit]'), dl=e.target.closest('[data-del]');
@@ -486,7 +502,7 @@ document.getElementById('refreshBtn').addEventListener('click',load);
 document.getElementById('startDate').addEventListener('change',load);
 document.getElementById('endDate').addEventListener('change',load);
 document.getElementById('areaSel').addEventListener('change',load);
-load();
+load().then(checkAccess);
 setInterval(load,300000);
 </script>
 </body></html>

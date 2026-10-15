@@ -21,6 +21,9 @@
  *    4) Oi /exec URL ta dashboard e paste korun:
  *         https://akij-light-engineering-ltd.github.io/ALEL-All-Entry/5s-dashboard.html
  *       → ✏️ Edit → setup box e URL paste → "Save URL"
+ *    5) (Strongest) niche CONFIG e EDIT_KEY set korun — jemon 'ALEL-5S-2026'.
+ *       Dashboard er setup box e oi code ekbar dile ei browser theke edit hobe;
+ *       onno karo browser e Edit/Delete button-i asbe na ✓
  *
  *  NOTE: ei script ta tomar 5S FORM er script theke ALADA rakha bhalo —
  *        tahole form er /exec URL kono rokome change hobe na.
@@ -42,6 +45,11 @@ var MAX_PER_Q  = 3;                // protiti question er max score
 var EDITORS = [
   'md.marufhossain@akijlightengineering.com'
 ];
+
+// Extra lock (optional but recommended): ei code chara kono browser theke
+// edit/delete kora jabe na. Code ta dashboard er "setup" box e ekbar dite hoy
+// (browser e save thake). Eta khali rakhle sudhu Google account check cholbe.
+var EDIT_KEY = '';   // e.g. 'ALEL-5S-2026' — set korle eta mandatory hoye jay
 
 // Deployment access "Anyone with a Google account" dile script caller er asol
 // Google account o check kore (Session.getActiveUser) — eta sob theke strong.
@@ -131,18 +139,30 @@ function callerEmail_() {
  */
 function editorOk_(p) {
   var list = (EDITORS || []).map(norm_);
-  if (!list.length) return { ok: true, via: 'open', email: '(EDITORS list khali)' };
-
+  var code = String((p && p.code) || '');
   var sess = callerEmail_();
+
+  // 1) Google session ache -> oi ta-i final (fake kora jay na)
   if (sess) {
-    if (list.indexOf(sess) >= 0) return { ok: true, via: 'google-session', email: sess };
+    if (!list.length || list.indexOf(sess) >= 0) return { ok: true, via: 'google-session', email: sess };
     return {
       ok: false, via: 'google-session', email: sess,
       error: 'Ei Google account (' + sess + ') er edit permission nei. Only ' + EDITORS.join(', ') + ' — oi account diye login kore abar chesta korun.'
     };
   }
 
-  var claim = norm_((p && p.by && p.by.email) || '');
+  // 2) EDIT_KEY set kora ache -> code mile kina dekho
+  if (EDIT_KEY) {
+    if (code && code === EDIT_KEY) return { ok: true, via: 'access-key', email: '(access code)' };
+    return {
+      ok: false, via: 'access-key', email: '(no session / no code)',
+      error: 'Edit permission nei — tomar Google account chine na, ar access code o nei.'
+    };
+  }
+
+  // 3) EDIT_KEY khali -> payload email check (weak fallback)
+  var claim = norm_((p && p.by && p.by.email) || (p && p.email) || '');
+  if (!list.length) return { ok: true, via: 'open', email: '(open)' };
   if (claim && list.indexOf(claim) >= 0) return { ok: true, via: 'email', email: claim };
   return {
     ok: false, via: 'email', email: claim || '(khali)',
