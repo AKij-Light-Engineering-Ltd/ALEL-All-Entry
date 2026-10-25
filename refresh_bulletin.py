@@ -928,6 +928,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .pulse-bulletin .pc-val{font-size:16px;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
   .pulse-bulletin{border:1px dashed rgba(255,159,67,.35);}
   .pulse-kpis .kpi{border:1px solid rgba(255,159,67,.22);}
+  /* per-SKU delete button on Pulse SMV cards (admin only) */
+  .pulse-del{display:none;margin-left:8px;border:1px solid #ef4444;background:rgba(255,255,255,.06);color:#ffb4a2;border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;}
+  body.is-admin .pulse-del{display:inline-flex;}
+  .pulse-del:hover{background:#ef4444;color:#fff;}
+  #hiddenBar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:9px 13px;border:1px dashed #f59e0b;background:rgba(245,158,11,.1);border-radius:11px;font:600 12.5px Inter,system-ui,sans-serif;color:#fbbf24;}
+  #hiddenBar b{color:#fcd34d;}
+  #hiddenBar button{border:1px solid rgba(245,158,11,.6);background:transparent;color:#fcd34d;border-radius:7px;padding:4px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;}
+  #hiddenBar button:hover{background:#f59e0b;color:#3a1200;}
   .kv-row{display:flex;gap:16px;padding:14px 20px 6px;align-items:flex-start;}
   .photo{flex:0 0 110px;width:110px;height:118px;border:1px solid var(--line);border-radius:12px;padding:6px;
          background:linear-gradient(180deg,#fff,var(--soft));position:relative;display:flex;align-items:center;justify-content:center;}
@@ -1198,6 +1206,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b> at <b id="refTime">%BUILDSTAMP%</b> &middot; <span id="liveClock"></span></div>
   </div>
   <div class="chips" id="chips">%CHIPS%</div>
+  <div id="hiddenBar"><span>&#128465; <b id="hiddenN">0</b> SKU hidden from Pulse SMV</span><button id="hiddenRestore" type="button">Restore all</button><button id="hiddenExport" type="button">Copy hidden codes</button></div>
 </div>
 
 <!-- login overlay -->
@@ -1356,6 +1365,57 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
   var bullets = Array.prototype.slice.call(document.querySelectorAll('.bulletin'));
   var pulseBullets = [];
+  /* ---- Pulse SMV: per-SKU delete (admin only, hidden list kept in this browser) ---- */
+  var PULSE_HIDDEN_KEY='alel_pulse_hidden_v1';
+  var PULSE_HIDDEN=[];
+  try{ PULSE_HIDDEN=JSON.parse(localStorage.getItem(PULSE_HIDDEN_KEY)||'[]')||[]; }catch(e){ PULSE_HIDDEN=[]; }
+  function pulseSaveHidden(){ try{ localStorage.setItem(PULSE_HIDDEN_KEY, JSON.stringify(PULSE_HIDDEN)); }catch(e){} pulseBar(); }
+  function pulseBar(){
+    var bar=document.getElementById('hiddenBar'); if(!bar) return;
+    var n=document.getElementById('hiddenN'); if(n) n.textContent=PULSE_HIDDEN.length;
+    bar.style.display = PULSE_HIDDEN.length ? 'inline-flex' : 'none';
+  }
+  function pulseRemoveCard(code){
+    var gone=null;
+    pulseBullets = pulseBullets.filter(function(b){
+      if((b.getAttribute('data-code')||'')===code){ gone=b; return false; }
+      return true;
+    });
+    if(gone && gone.parentNode) gone.parentNode.removeChild(gone);
+    var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=pulseBullets.length;
+    var allCnt=document.querySelector('.chip[data-sec="all"] i');
+    if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
+    try{ apply(); }catch(e){}
+  }
+  document.addEventListener('click', function(ev){
+    var btn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-del') : null;
+    if(!btn) return;
+    if(!SESSION || SESSION.role!=='admin'){ alert('Only admin can delete a SKU.'); return; }
+    var code=btn.getAttribute('data-del')||''; if(!code) return;
+    var card=btn.closest('.bulletin');
+    var nm=card ? (card.querySelector('.b-title')||{}).textContent || code : code;
+    var NL=String.fromCharCode(10);
+    if(!confirm('Delete this SKU from the Pulse SMV list?'+NL+NL+nm+NL+NL+'It will be hidden right away. Use "Restore all" above the list to bring it back.')) return;
+    if(PULSE_HIDDEN.indexOf(code)<0) PULSE_HIDDEN.push(code);
+    pulseSaveHidden();
+    pulseRemoveCard(code);
+  });
+  (function bindPulseBar(){
+    var r=document.getElementById('hiddenRestore');
+    if(r) r.addEventListener('click', function(){
+      if(!PULSE_HIDDEN.length) return;
+      if(!confirm('Restore all '+PULSE_HIDDEN.length+' hidden SKUs?')) return;
+      PULSE_HIDDEN=[]; pulseSaveHidden(); location.reload();
+    });
+    var c=document.getElementById('hiddenExport');
+    if(c) c.addEventListener('click', function(){
+      var txt=PULSE_HIDDEN.join(String.fromCharCode(10));
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){ alert('Copied '+PULSE_HIDDEN.length+' hidden SKU codes.'); }, function(){ prompt('Hidden SKU codes:', txt); });
+      } else { prompt('Hidden SKU codes:', txt); }
+    });
+    pulseBar();
+  })();
   var qEl=document.getElementById('q'), clr=document.getElementById('clr'),
       sugg=document.getElementById('sugg'), cntEl=document.getElementById('cnt'),
       cntP=document.getElementById('cntPend'), cntA=document.getElementById('cntApr'),
@@ -1429,6 +1489,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if(SESSION){ hideLogin(); whoUser.textContent = SESSION.name + ' \u00b7 ' + SESSION.role; }
     else { whoUser.textContent=''; }
     if(adminBtn){ adminBtn.style.display = (SESSION && SESSION.role==='admin') ? 'inline-flex' : 'none'; }
+    document.body.classList.toggle('is-admin', !!(SESSION && SESSION.role==='admin'));
     if(SESSION && SESSION.role==='admin'){ renderAdminPanel(); }
     mergeServerRemarks();
     buildRemarks();
@@ -2067,6 +2128,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         var tp=parseFloat(String(r[iTp]||"").replace(/[%,]/g,""));
         if(!code||!name||!(tp>0)) return;
         if(codeOf[code]) return;
+        if(PULSE_HIDDEN.indexOf(code)>=0) return;
         var smv=60/tp;
         var sec=pulseSection(String(r[iPg]||""), String(r[iSec]||""));
         var b=document.createElement('section');
@@ -2083,7 +2145,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               '<h2 class="b-title">'+escH(name)+'</h2>'+
               '<div class="b-sub">Standard SMV from Target Productivity &middot; no Operation Bulletin yet</div>'+
             '</div>'+
-            '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span></div>'+
+            '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span>'+
+              '<button class="pulse-del" type="button" data-del="'+escH(code)+'" title="Delete this SKU from Pulse SMV">&#128465; Delete</button></div>'+
           '</div>'+
           '<div class="kpis pulse-kpis">'+
             '<div class="kpi k-smv"><div class="k-top">'+icSmv+'<span>Total SMV</span></div><div class="k-val">'+smv.toFixed(4)+'</div><div class="k-unit">min / pc</div></div>'+
