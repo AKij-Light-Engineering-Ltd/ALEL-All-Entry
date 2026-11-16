@@ -20,7 +20,6 @@
   ::selection{background:rgba(14,159,122,.25);}
   ::-webkit-scrollbar{width:10px;height:10px;} ::-webkit-scrollbar-thumb{background:#2a3a56;border-radius:8px;}
   button{font-family:inherit;}
-
   /* ---------- topbar ---------- */
   .topbar{position:sticky;top:0;z-index:100;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
           background:rgba(8,13,27,.8);border-bottom:1px solid rgba(255,255,255,.08);transition:transform .28s;}
@@ -145,6 +144,14 @@
   .pulse-obn{background:linear-gradient(135deg,#ff9f43,#ff6b35);color:#3a1200;}
   .pulse-bulletin .pc-val{font-size:16px;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
   .pulse-bulletin{border:1px dashed rgba(255,159,67,.35);}
+  /* Pulse Approve Button */
+  .pulse-appr{
+background:none;border:1px solid #12b886;background:rgba(18,184,134,.15);color:#12b886;
+border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;
+}
+.pulse-appr:hover{background:#12b886;color:#fff;}
+.pulse-appr.approved{background:#12b886;color:#fff;border-color:#0b7a5f;}
+.pulse-card-approved{border:2px solid #12b886;background:rgba(18,184,134,.05);}
   .pulse-kpis .kpi{border:1px solid rgba(255,159,67,.22);}
   /* per-SKU delete button on Pulse SMV cards (admin only) */
   .pulse-del{display:none;margin-left:8px;border:1px solid #ef4444;background:rgba(255,255,255,.06);color:#ffb4a2;border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;}
@@ -605,6 +612,23 @@
     if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
     try{ apply(); }catch(e){}
   }
+  /* Pulse SMV approve */
+  document.addEventListener('click', function(ev){
+    var btn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-appr') : null;
+    if(!btn) return;
+    ev.preventDefault();
+    var card=btn.closest('.bulletin');
+    if(!card) return;
+    if(card.classList.contains('pulse-card-approved')){
+      card.classList.remove('pulse-card-approved');
+      btn.classList.remove('approved');
+      btn.innerHTML='&#10003; Approve';
+    } else {
+      card.classList.add('pulse-card-approved');
+      btn.classList.add('approved');
+      btn.innerHTML='&#10004; Approved';
+    }
+  });
   document.addEventListener('click', function(ev){
     var btn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-del') : null;
     if(!btn) return;
@@ -1364,8 +1388,8 @@
               '<div class="b-sub">Standard SMV from Target Productivity &middot; no Operation Bulletin yet</div>'+
             '</div>'+
             '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span>'+
-              '<button class="pulse-del" type="button" data-del="'+escH(code)+'" title="Delete this SKU from Pulse SMV">&#128465; Delete</button></div>'+
-          '</div>'+
+  '<button class="pulse-appr" type="button" data-appr="'+escH(code)+'" title="Approve this SKU">&#10003; Approve</button>'+
+  '<button class="pulse-del" type="button" data-del="'+escH(code)+'" title="Delete this SKU from Pulse SMV">&#128465; Delete</button></div>'+
           '<div class="kpis pulse-kpis">'+
             '<div class="kpi k-smv"><div class="k-top">'+icSmv+'<span>Total SMV</span></div><div class="k-val">'+smv.toFixed(4)+'</div><div class="k-unit">min / pc</div></div>'+
             '<div class="kpi k-prod"><div class="k-top">'+icProd+'<span>Target Productivity</span></div><div class="k-val">'+Math.round(tp).toLocaleString()+'</div><div class="k-unit">pcs / op-hr</div></div>'+
