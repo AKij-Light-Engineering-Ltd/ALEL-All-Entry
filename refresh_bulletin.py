@@ -267,35 +267,83 @@ def parse_all():
 
     wb = openpyxl.load_workbook(XLSX_TMP, read_only=True, data_only=True)
 
-    # ---- Section map from PG LIST: col A=Code, col E=Section ----
+    # ---- PG LIST master data: A=Code, B=Product Name, D=PG, E=Section, F=Remarks, G=SMV, H=Manpower ----
+    # PG LIST is the master list: the sheet owner edits names/sections/SMV there,
+    # so those values win over whatever the individual product tab header says.
+    def _norm_code(v):
+        if v is None:
+            return ""
+        c = str(v).strip()
+        if c.endswith(".0"):
+            c = c[:-2]
+        return c
+
+    def _cell(row, i):
+        try:
+            v = row[i].value
+        except Exception:
+            return ""
+        return "" if v is None else str(v).strip()
+
     code2sec = {}
+    code2pg = {}
     try:
         pgl = wb["PG LIST"]
         for row in pgl.iter_rows(min_row=2):
-            if len(row) < 5:
+            c = _norm_code(row[0].value if len(row) > 0 else None)
+            if not c:
                 continue
-            code = row[0].value
-            sec = row[4].value
-            if code is None or sec is None:
-                continue
-            c = str(code).strip()
-            if c.endswith(".0"):
-                c = c[:-2]
-            s = str(sec).strip()
-            if c and s:
-                code2sec[c] = s
+            sec = _cell(row, 4)
+            if sec:
+                code2sec[c] = sec
+            code2pg[c] = {
+                "name": _cell(row, 1),
+                "pg": _cell(row, 3),
+                "sec": sec,
+                "remark": _cell(row, 5),
+                "smv": (row[6].value if len(row) > 6 else None),
+                "mp": (row[7].value if len(row) > 7 else None),
+            }
     except Exception as e:
-        log("      (PG LIST section read skipped: %s)" % e)
+        log("      (PG LIST read skipped: %s)" % e)
+    log("      PG LIST: %d SKU rows" % len(code2pg))
 
     results = []
     for nm in wb.sheetnames:
         m = parse_sheet(wb[nm], sno2img)
         if m["ops"] and (m["header"].get("name") or m["header"].get("code")):
-            hc = str(m["header"].get("code") or "").strip()
-            if hc.endswith(".0"):
-                hc = hc[:-2]
+            hc = _norm_code(m["header"].get("code"))
             m["section"] = code2sec.get(hc, "")
+            m["pg"] = code2pg.get(hc)
             results.append(m)
+
+    # ---- SKUs that are in PG LIST (with an SMV) but have no product tab yet ----
+    # They are still real SKUs, so they get a card marked "Incomplete" instead of
+    # silently disappearing until someone builds the study tab.
+    have = set(_norm_code(r["header"].get("code")) for r in results)
+    added = 0
+    for c, p in code2pg.items():
+        if c in have:
+            continue
+        try:
+            smv_ok = float(p.get("smv")) > 0
+        except Exception:
+            smv_ok = False
+        if not smv_ok:
+            continue
+        nm2 = p.get("name") or c
+        results.append({
+            "sheet": nm2,
+            "header": {"name": nm2, "code": c, "group": p.get("pg") or "",
+                       "smv": p.get("smv"), "mp": p.get("mp")},
+            "ops": [], "alloc": [], "image": None,
+            "section": p.get("sec") or "",
+            "pg": p,
+        })
+        added += 1
+    if added:
+        log("      + %d PG LIST SKUs added (no study tab yet)" % added)
+
     wb.close()
     log("      %d product bulletins found" % len(results))
     return results, media_bytes
@@ -422,7 +470,28 @@ def build_html(results, media_bytes, out_path=None):
         section = (r.get("section") or "").upper()
         img = image_uri(r["image"], media_bytes, img_cache) if r.get("image") else None
 
+        # PG LIST is the master list the owner edits -> its values win
+        pgrow = r.get("pg") or {}
+        pg_name = str(pgrow.get("name") or "").strip()
+        if pg_name:
+            name = pg_name
+        pg_sec = str(pgrow.get("sec") or "").strip()
+        if pg_sec:
+            section = pg_sec.upper()
+        if not group:
+            group = str(pgrow.get("pg") or "").strip()
+
         smv, mp, hc, prod = (num(h.get(k)) for k in ("smv", "mp", "hc", "prod"))
+        if smv is None:
+            try:
+                smv = float(pgrow.get("smv"))
+            except Exception:
+                smv = None
+        if mp is None:
+            try:
+                mp = float(pgrow.get("mp"))
+            except Exception:
+                mp = None
         sum_smv = sum(num(o.get("P")) or 0 for o in ops)
         has_real = any((o.get("B") or "").strip() and (num(o.get("P")) or 0) > 0 for o in ops)
         realflag = "1" if has_real else "0"
