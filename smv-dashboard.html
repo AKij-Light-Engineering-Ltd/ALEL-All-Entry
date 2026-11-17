@@ -147,6 +147,7 @@
   var URL_PG   = "https://docs.google.com/spreadsheets/d/"+SHEET_PG+"/gviz/tq?tqx=out:csv&sheet=PG%20LIST";
   var URL_APPR = "https://docs.google.com/spreadsheets/d/"+SHEET_PG+"/gviz/tq?tqx=out:csv&sheet=SMV%20Approvals";
   var URL_IDX  = "ob-home.html";
+  var URL_BE    = "https://script.google.com/macros/s/AKfycbzDVpC-tm_KHkvEwt19aM_ttWckDFawrTWtb_jh9D7X1matnRchBbAEthgrd8Bbobia/exec";
 
   var ROWS = [], FILTER = "all", Q = "", SECF = "";
 
@@ -177,9 +178,20 @@
     if(!m) return [];
     try { return JSON.parse(m[1]); } catch(e){ return []; }
   }).catch(function(){ return []; });
+    var pBe = fetch(URL_BE,{method:'POST',body:JSON.stringify({action:'list'}),redirect:'follow'})
+      .then(function(r){ return r.json(); }).catch(function(){ return null; });
 
-    Promise.all([pPg,pAp,pIx]).then(function(res){
-      var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[];
+    Promise.all([pPg,pAp,pIx,pBe]).then(function(res){
+      var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[], be = res[3];
+
+      // backend (instant, no gviz cache) - overrides stale csv
+      if(be && be.ok && Array.isArray(be.approvals)){
+        be.approvals.forEach(function(a){
+          if(!a || !a.code) return;
+          var c = String(a.code).replace(/\.0$/,"");
+          if(a.a || a.a===1) apprMap[c]=1; else delete apprMap[c];
+        });
+      }
 
       var idxMap = {};
       (Array.isArray(idx)?idx:[]).forEach(function(o){ if(o && o.c) idxMap[String(o.c)] = o; });

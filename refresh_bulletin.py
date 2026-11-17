@@ -758,7 +758,7 @@ def build_html(results, media_bytes, out_path=None):
         if sec_counts.get(k):
             lbl = {"OTHER": "Other"}.get(k, k)
             chip_html += f'<button class="chip" data-sec="{esc(k.lower())}">{esc(lbl)} Section<i>{sec_counts[k]}</i></button>'
-    chip_html += '<button class="chip chip-pulse" data-sec="pulse">Pulse SMV<i id="pulseCnt">…</i></button>'
+    # (Pulse SMV items are merged into their sections - GSS/LED/HAP - no separate chip)
 
     people = []
     people.append({"k": PREPARED_BY["name"], "l": PREPARED_BY["name"] + " (Prepared)"})
@@ -2065,10 +2065,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   function apply(){
     var t=(qEl.value||'').trim().toLowerCase();
     var n=0, np=0, na=0;
-    var pulseMode = activeSec==='pulse';
     bullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
-      if(show && pulseMode) show=false;
       if(show && activeSec!=='all' && b.getAttribute('data-sec')!==activeSec) show=false;
       var s=stOf(b);
       if(show && activeView==='pend' && s.a===1) show=false;
@@ -2085,7 +2083,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     // Pulse SMV items (from the Production Dashboard) - show in "all" and "pulse" views
     pulseBullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
-      if(show && activeSec!=='all' && activeSec!=='pulse') show=false;
+      if(show && activeSec!=='all' && b.getAttribute('data-sec')!==activeSec) show=false;
       if(show && activeView!=='all') show=false;
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'', sc=b.getAttribute('data-sec')||'';
@@ -2572,6 +2570,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       });
       var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=cnt;
       var allCnt=document.querySelector('.chip[data-sec="all"] i'); if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
+      // keep section chip counts in sync now that pulse cards are merged into sections
+      ['gss','led','hap'].forEach(function(sec){
+        var chip=document.querySelector('.chip[data-sec="'+sec+'"] i');
+        if(chip) chip.textContent=document.querySelectorAll('.bulletin[data-sec="'+sec+'"]').length;
+      });
       apply();
     }).catch(function(){});
   }
