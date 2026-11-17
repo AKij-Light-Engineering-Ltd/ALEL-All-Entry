@@ -184,14 +184,6 @@
     Promise.all([pPg,pAp,pIx,pBe]).then(function(res){
       var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[], be = res[3];
 
-      // backend (instant, no gviz cache) - overrides stale csv
-      if(be && be.ok && Array.isArray(be.approvals)){
-        be.approvals.forEach(function(a){
-          if(!a || !a.code) return;
-          var c = String(a.code).replace(/\.0$/,"");
-          if(a.a || a.a===1) apprMap[c]=1; else delete apprMap[c];
-        });
-      }
 
       var idxMap = {};
       (Array.isArray(idx)?idx:[]).forEach(function(o){ if(o && o.c) idxMap[String(o.c)] = o; });
@@ -206,6 +198,15 @@
             if(aa>=0 && num(r[aa])>0) apprMap[c]=1;
           });
         }
+      }
+
+      // backend (instant, no gviz cache) - overrides stale csv
+      if(be && be.ok && Array.isArray(be.approvals)){
+        be.approvals.forEach(function(a){
+          if(!a || !a.code) return;
+          var c = String(a.code).replace(/\.0$/,"");
+          if(a.a || a.a===1) apprMap[c]=1; else delete apprMap[c];
+        });
       }
 
       var hdr = pgCsv[0]||[];
