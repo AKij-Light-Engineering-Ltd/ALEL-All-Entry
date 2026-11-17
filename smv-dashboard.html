@@ -178,11 +178,8 @@
     if(!m) return [];
     try { return JSON.parse(m[1]); } catch(e){ return []; }
   }).catch(function(){ return []; });
-    var pBe = fetch(URL_BE,{method:'POST',body:JSON.stringify({action:'list'}),redirect:'follow'})
-      .then(function(r){ return r.json(); }).catch(function(){ return null; });
-
-    Promise.all([pPg,pAp,pIx,pBe]).then(function(res){
-      var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[], be = res[3];
+    Promise.all([pPg,pAp,pIx]).then(function(res){
+      var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[];
 
 
       var idxMap = {};
@@ -199,16 +196,6 @@
           });
         }
       }
-
-      // backend (instant) - approvals
-      var beApprMap = {};
-      try {
-        if(be && be.ok && Array.isArray(be.approvals)){
-          be.approvals.forEach(function(a){
-            if(a && a.code && (a.a || a.a === 1)) beApprMap[String(a.code).replace(/\.0$/,"")] = 1;
-          });
-        }
-      } catch(err) { /* ignore */ }
 
       var hdr = pgCsv[0]||[];
       var cCode = col(hdr,/^code$/i), cName = col(hdr,/product\s*name/i),
@@ -235,7 +222,7 @@
           mp: (i && i.mp) ? +i.mp : null,
           ops: i ? (+i.ops||0) : 0,
           complete: !!(i && (+i.ops||0) > 0),
-          approved: !!(apprMap[code] || beApprMap[code] || (i && +i.appr === 1))
+          approved: !!(apprMap[code] || (i && +i.appr === 1))
         };
       });
 
