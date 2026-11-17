@@ -307,6 +307,16 @@ def parse_all():
     except Exception as e:
         log("      (PG LIST read skipped: %s)" % e)
     log("      PG LIST: %d SKU rows" % len(code2pg))
+    _n_smv = 0
+    _smv_codes = []
+    for _c, _p in code2pg.items():
+        try:
+            if float(_p.get("smv")) > 0:
+                _n_smv += 1
+                _smv_codes.append(_c)
+        except Exception:
+            pass
+    log("      PG LIST rows with SMV>0: %d %s" % (_n_smv, ",".join(_smv_codes[:8])))
 
     results = []
     for nm in wb.sheetnames:
