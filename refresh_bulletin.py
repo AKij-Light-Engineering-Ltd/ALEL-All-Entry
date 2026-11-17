@@ -2080,7 +2080,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       var s=stOf(b);
       if(show && activeView==='pend' && s.a===1) show=false;
       if(show && activeView==='appr' && !(s.a===1)) show=false;
-      if(show && activeView==='inc' && !b.classList.contains('incomplete')) show=false;
+      if(activeView==='inc'){
+        if(!b.classList.contains('incomplete')) show=false;
+      } else {
+        if(b.classList.contains('incomplete')) show=false;
+      }
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'',
             sc=b.getAttribute('data-sec')||'', sh=b.getAttribute('data-sheet')||'';
@@ -2093,7 +2097,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     pulseBullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
       if(show && activeSec!=='all' && b.getAttribute('data-sec')!==activeSec) show=false;
-      if(show && activeView!=='all') show=false;
+      if(activeView==='inc'){
+        if(!b.classList.contains('incomplete')) show=false;
+      } else {
+        if(b.classList.contains('incomplete')) show=false;
+        if(activeView!=='all') show=false;
+      }
       if(show && t){
         var nm=b.getAttribute('data-name')||'', cd=b.getAttribute('data-code')||'', sc=b.getAttribute('data-sec')||'';
         show = nm.indexOf(t)>-1||cd.indexOf(t)>-1||sc.indexOf(t)>-1;
@@ -2547,8 +2556,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         var code=it.code, name=it.name, smv=it.smv, tp=it.tp, sec=it.sec;
         var mp=manpowerOf(code);
         var st=STORE[code]||{};
+        var pcomplete = !!(it.smv) && (mp!=null) && !!it.tp;
         var b=document.createElement('section');
-        b.className='bulletin pulse-bulletin'+(st.a?' pulse-card-approved':'');
+        b.className='bulletin pulse-bulletin'+(pcomplete?'':' incomplete')+(st.a?' pulse-card-approved':'');
         b.setAttribute('data-code',code);
         b.setAttribute('data-name',name.toLowerCase());
         b.setAttribute('data-sec',sec);
