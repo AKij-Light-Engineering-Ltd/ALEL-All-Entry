@@ -200,6 +200,16 @@
         }
       }
 
+      // backend (instant) - approvals
+      var beApprMap = {};
+      try {
+        if(be && be.ok && Array.isArray(be.approvals)){
+          be.approvals.forEach(function(a){
+            if(a && a.code && (a.a || a.a === 1)) beApprMap[String(a.code).replace(/\.0$/,"")] = 1;
+          });
+        }
+      } catch(err) { /* ignore */ }
+
       var hdr = pgCsv[0]||[];
       var cCode = col(hdr,/^code$/i), cName = col(hdr,/product\s*name/i),
           cSec = col(hdr,/^section$/i), cSmv = col(hdr,/^smv$/i), cPg = col(hdr,/^pg$/i);
@@ -225,7 +235,7 @@
           mp: (i && i.mp) ? +i.mp : null,
           ops: i ? (+i.ops||0) : 0,
           complete: !!(i && (+i.ops||0) > 0),
-          approved: !!(apprMap[code] || (i && +i.appr === 1))
+          approved: !!(apprMap[code] || beApprMap[code] || (i && +i.appr === 1))
         };
       });
 
