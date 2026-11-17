@@ -234,7 +234,6 @@
       document.getElementById('stamp').textContent = new Date().toLocaleString();
       render();
     }).catch(function(e){
-      try { console.error('DASHBOARD LOAD ERROR:', e && e.stack ? e.stack : e); } catch(x){}
       document.getElementById('load').innerHTML = 'Load failed: ' + (e && e.message ? e.message : e) +
         '<br><small>Sheet ta "anyone with the link" share kora ache kina check koro.</small>';
     });
