@@ -1007,6 +1007,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .pulse-bulletin .pc-val{font-size:16px;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
   .pulse-bulletin{border:1px dashed rgba(255,159,67,.35);}
   .pulse-kpis .kpi{border:1px solid rgba(255,159,67,.22);}
+  /* Pulse SMV approve button */
+  .pulse-appr{background:none;border:1px solid #12b886;background:rgba(18,184,134,.15);color:#12b886;
+    border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;margin-left:8px;}
+  .pulse-appr:hover{background:#12b886;color:#fff;}
+  .pulse-appr.approved{background:#12b886;color:#fff;border-color:#0b7a5f;}
+  .pulse-card-approved{border:2px solid #12b886;background:rgba(18,184,134,.05);}
   /* per-SKU delete button on Pulse SMV cards (admin only) */
   .pulse-del{display:none;margin-left:8px;border:1px solid #ef4444;background:rgba(255,255,255,.06);color:#ffb4a2;border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;}
   body.is-admin .pulse-del{display:inline-flex;}
@@ -1466,6 +1472,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
     try{ apply(); }catch(e){}
   }
+   document.addEventListener('click', function(ev){
+    var abtn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-appr') : null;
+    if(!abtn) return;
+    ev.preventDefault();
+    var acard=abtn.closest('.bulletin');
+    if(!acard) return;
+    if(acard.classList.contains('pulse-card-approved')){
+      acard.classList.remove('pulse-card-approved');
+      abtn.classList.remove('approved');
+      abtn.innerHTML='&#10003; Approve';
+    } else {
+      acard.classList.add('pulse-card-approved');
+      abtn.classList.add('approved');
+      abtn.innerHTML='&#10004; Approved';
+    }
+  });
   document.addEventListener('click', function(ev){
     var btn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-del') : null;
     if(!btn) return;
@@ -2225,6 +2247,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               '<div class="b-sub">Standard SMV from Target Productivity &middot; no Operation Bulletin yet</div>'+
             '</div>'+
             '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span>'+
+              '<button class="pulse-appr" type="button" data-appr="'+escH(code)+'" title="Approve this SKU">&#10003; Approve</button>'+
               '<button class="pulse-del" type="button" data-del="'+escH(code)+'" title="Delete this SKU from Pulse SMV">&#128465; Delete</button></div>'+
           '</div>'+
           '<div class="kpis pulse-kpis">'+
