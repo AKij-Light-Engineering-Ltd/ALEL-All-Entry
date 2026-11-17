@@ -318,6 +318,41 @@ def parse_all():
             pass
     log("      PG LIST rows with SMV>0: %d %s" % (_n_smv, ",".join(_smv_codes[:8])))
 
+    # ---- approvals + operations typed on the page (written by the Apps Script web app) ----
+    def _rows_of(tab):
+        try:
+            return list(wb[tab].iter_rows(min_row=2, values_only=True))
+        except Exception:
+            return []
+
+    approvals = {}
+    for row in _rows_of("SMV Approvals"):
+        c = _norm_code(row[0] if len(row) > 0 else None)
+        if not c:
+            continue
+        bits = []
+        for i in (1, 2, 3):
+            try:
+                bits.append(1 if float(row[i] or 0) else 0)
+            except Exception:
+                bits.append(0)
+        approvals[c] = {"p": bits[0], "c": bits[1], "a": bits[2],
+                        "by": str(row[4] or ""), "at": str(row[5] or "")}
+
+    manual_ops = {}
+    for row in _rows_of("Manual Ops"):
+        c = _norm_code(row[0] if len(row) > 0 else None)
+        op = str(row[1] or "").strip() if len(row) > 1 else ""
+        if not c or not op:
+            continue
+        manual_ops.setdefault(c, []).append({
+            "op": op,
+            "smv": (row[2] if len(row) > 2 else None),
+            "mp": (row[3] if len(row) > 3 else None),
+            "line": (str(row[4] or "") if len(row) > 4 else ""),
+        })
+    log("      approvals: %d SKU | manual operations: %d SKU" % (len(approvals), len(manual_ops)))
+
     results = []
     for nm in wb.sheetnames:
         m = parse_sheet(wb[nm], sno2img)
@@ -353,6 +388,33 @@ def parse_all():
         added += 1
     if added:
         log("      + %d PG LIST SKUs added (no study tab yet)" % added)
+
+    # ---- SKUs whose operations were typed on the bulletin page (Manual Ops tab) ----
+    added_manual = 0
+    have_now = set(_norm_code(r["header"].get("code")) for r in results)
+    for c, ops_rows in manual_ops.items():
+        if c in have_now:
+            continue
+        p = code2pg.get(c) or {}
+        nm2 = p.get("name") or c
+        ops_built = []
+        for i, o_ in enumerate(ops_rows, start=1):
+            ops_built.append({"A": i, "B": o_["op"], "C": o_["line"] or "",
+                              "D": None, "E": None, "F": o_["mp"], "P": o_["smv"]})
+        results.append({
+            "sheet": nm2,
+            "header": {"name": nm2, "code": c, "group": p.get("pg") or ""},
+            "ops": ops_built, "alloc": [], "image": None,
+            "section": p.get("sec") or "",
+            "pg": p,
+            "manual": True,
+        })
+        added_manual += 1
+    if added_manual:
+        log("      + %d SKUs from Manual Ops" % added_manual)
+
+    for r in results:
+        r["appr"] = approvals.get(_norm_code(r["header"].get("code"))) or {}
 
     wb.close()
     log("      %d product bulletins found" % len(results))
@@ -710,6 +772,8 @@ def build_html(results, media_bytes, out_path=None):
     cat_json = js_json(catalog)
     people_json = js_json(people)
     users_json = js_json(login_user_db())
+    appr_json = js_json({_norm_code(r["header"].get("code")): r.get("appr") for r in results
+                         if (r.get("appr") or {}).get("a")})
 
     html_doc = HTML_TEMPLATE.replace("%BULLETINS%", "".join(bullets)) \
                             .replace("%CHIPS%", chip_html) \
@@ -717,6 +781,7 @@ def build_html(results, media_bytes, out_path=None):
                             .replace("%REFRESHED%", today) \
                             .replace("%BUILDSTAMP%", buildstamp) \
                             .replace("%CATALOG%", cat_json) \
+                            .replace("%APPR%", appr_json) \
                             .replace("%PEOPLE%", people_json) \
                             .replace("%USERS%", users_json) \
                             .replace("%HOME_URL%", HOME_URL) \
@@ -761,7 +826,7 @@ def build_home(results, media_bytes, dest=None):
         else:
             n = 0
             img = ""
-            subtitle = "No data yet — add this section in Google Sheet, it will appear automatically"
+            subtitle = "No data yet - add this section in Google Sheet, it will appear automatically"
             extra = ' class="soon-link"'
             link = "ob-home.html"
             tag = "a"
@@ -779,7 +844,7 @@ def build_home(results, media_bytes, dest=None):
     doc = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ALEL Operation Bulletin — Home</title>
+<title>ALEL Operation Bulletin - Home</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -823,7 +888,35 @@ def build_home(results, media_bytes, dest=None):
   </div>
   <div class="grid">{''.join(cards)}</div>
   <div class="foot">Updated {today} &middot; Adding a new product tab in the Google Sheet automatically syncs it here after refresh. &middot; Operational Excellence</div>
-</body></html>"""
+"""
+    _idx_items = []
+    for r in results:
+        h = r["header"]
+        code = str(h.get("code") or "").strip()
+        if code.endswith(".0"): code = code[:-2]
+        pgrow = r.get("pg") or {}
+        name = str(pgrow.get("name") or h.get("name") or r["sheet"]).strip()
+        sec = str(pgrow.get("sec") or r.get("section") or "").strip().upper()
+        smv = num(h.get("smv"))
+        if smv is None:
+            try: smv = float(pgrow.get("smv"))
+            except Exception: smv = None
+        if smv is None:
+            s = sum(num(o.get("P")) or 0 for o in r["ops"]); smv = s if s else None
+        mp = num(h.get("mp"))
+        if mp is None:
+            try: mp = float(pgrow.get("mp"))
+            except Exception: mp = None
+        if mp is None:
+            s2 = sum(num(o.get("F")) or 0 for o in r["ops"]); mp = s2 if s2 else None
+        appr = r.get("appr") or {}
+        _idx_items.append({"c": code, "n": name, "s": sec,
+                          "smv": round(smv, 5) if smv else None,
+                          "mp": round(mp, 2) if mp else None,
+                          "ops": len(r["ops"]),
+                          "appr": 1 if appr.get("a") else 0})
+    _idx_json = json.dumps(_idx_items, ensure_ascii=False).replace("</", "<\\/")
+    doc = doc.rstrip() + "\n<script id=\"data-index\" type=\"application/json\">" + _idx_json + "</script>\n</body>\n</html>"
     d = dest or OUT_HOME
     with open(d, "w", encoding="utf-8") as f:
         f.write(doc)
@@ -1013,6 +1106,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .pulse-appr:hover{background:#12b886;color:#fff;}
   .pulse-appr.approved{background:#12b886;color:#fff;border-color:#0b7a5f;}
   .pulse-card-approved{border:2px solid #12b886;background:rgba(18,184,134,.05);}
+  /* add-process button on pulse cards */
+  .pulse-proc{display:inline-flex;align-items:center;gap:5px;margin-left:8px;border:1px solid #7aa5f0;background:rgba(91,141,239,.16);color:#cfe0ff;border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;}
+  .pulse-proc:hover{background:#5b8def;color:#fff;}
+  /* process modal */
+  .proc-modal{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(6,10,20,.62);padding:18px;}
+  .proc-card{width:100%;max-width:460px;max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:20px 20px 16px;box-shadow:0 30px 80px rgba(0,0,0,.45);}
+  .proc-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .proc-h h3{font-family:'Sora',sans-serif;font-size:17px;color:#0f172a;}
+  .proc-x{border:0;background:#eef2f7;width:30px;height:30px;border-radius:9px;font-size:17px;line-height:1;cursor:pointer;color:#5b6b81;}
+  .proc-code{font:800 11px Inter,sans-serif;letter-spacing:.06em;color:#7a8699;text-transform:uppercase;}
+  .proc-name{font:700 14px Inter,sans-serif;color:#16233a;margin:2px 0 12px;}
+  .proc-list{max-height:170px;overflow:auto;margin-bottom:10px;}
+  .proc-empty{font-size:12px;color:#8a97a8;padding:8px 0;}
+  .proc-item{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:6px 8px;border:1px solid #e7edf5;border-radius:9px;margin-bottom:6px;}
+  .proc-item span{flex:1;color:#16233a;}
+  .proc-item em{font-style:normal;font-weight:800;font-size:11px;color:#0b7a5f;}
+  .proc-sum{font-size:12px;color:#5b6b81;font-weight:700;padding:4px 2px;}
+  .proc-form label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7a8699;margin:8px 0 4px;}
+  .proc-form input{width:100%;padding:9px 11px;border:1px solid #dbe4ef;border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;}
+  .proc-form input:focus{border-color:#12b886;box-shadow:0 0 0 3px rgba(18,184,134,.15);}
+  .proc-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .proc-msg{min-height:16px;font-size:11.5px;font-weight:700;color:#b45309;margin:8px 0 2px;}
+  .proc-actions{display:flex;gap:8px;}
+  .proc-cancel{border:1px solid #dbe4ef;background:#fff;color:#5b6b81;border-radius:9px;padding:8px 14px;font:700 12px Inter,sans-serif;cursor:pointer;}
   /* per-SKU delete button on Pulse SMV cards (admin only) */
   .pulse-del{display:none;margin-left:8px;border:1px solid #ef4444;background:rgba(255,255,255,.06);color:#ffb4a2;border-radius:8px;padding:5px 10px;font:700 11.5px Inter,system-ui,sans-serif;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;}
   body.is-admin .pulse-del{display:inline-flex;}
@@ -1288,7 +1405,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
       <div class="sugg" id="sugg"></div>
     </div>
-    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b> at <b id="refTime">%BUILDSTAMP%</b> &middot; <span id="liveClock"></span></div>
+    <div class="tb-note">Approval: <b>Prepared (IE)</b> &rarr; <b>Checked</b> (section head) &rarr; <b>Approved</b> (Plant Head) &middot; login as your role to act &middot; Refreshed <b>%REFRESHED%</b> at <b id="refTime">%BUILDSTAMP%</b> &middot; <span id="liveClock"></span> &middot; <a href="smv-dashboard.html" style="font-weight:800;color:#0b7a5f;text-decoration:none">&#128202; SMV Dashboard</a></div>
   </div>
   <div class="chips" id="chips">%CHIPS%</div>
   <div id="hiddenBar"><span>&#128465; <b id="hiddenN">0</b> SKU hidden from Pulse SMV</span><button id="hiddenRestore" type="button">Restore all</button><button id="hiddenExport" type="button">Copy hidden codes</button></div>
@@ -1404,6 +1521,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <script id="data-cat" type="application/json">%CATALOG%</script>
 <script id="data-people" type="application/json">%PEOPLE%</script>
 <script id="data-users" type="application/json">%USERS%</script>
+<script id="data-appr" type="application/json">%APPR%</script>
 <script>
 (function(){
   /* ================= Shared backend (Google Apps Script) =================
@@ -1429,12 +1547,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       serverLoaded = true;
       if(j && j.ok){
         try{ SERVER_USERS = j.users || []; SERVER_REQS = j.requests || []; SERVER_APPR = j.approvals || []; SERVER_REMARKS = j.remarks || []; }catch(e){}
+        try{ SERVER_PROCS = j.processes || []; }catch(e){}
         try{ localStorage.setItem('alel_server_users', JSON.stringify(SERVER_USERS)); }catch(e){}
         if(done) done();
       } else { if(done) done(); }
     });
   }
-  var SERVER_USERS = []; var SERVER_REQS = []; var SERVER_APPR = []; var SERVER_REMARKS = [];
+  var SERVER_USERS = []; var SERVER_REQS = []; var SERVER_APPR = []; var SERVER_REMARKS = []; var SERVER_PROCS = [];
   try{ SERVER_USERS = JSON.parse(localStorage.getItem('alel_server_users')||'[]'); }catch(e){}
   try{ SERVER_REMARKS = JSON.parse(localStorage.getItem('alel_server_remarks')||'[]'); }catch(e){}
 
@@ -1443,6 +1562,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   var USERS = JSON.parse(document.getElementById('data-users').textContent || '[]');
   var STORE = {};
   try{ STORE = JSON.parse(localStorage.getItem('alel_approvals_v1')||'{}'); }catch(e){}
+  // approvals baked in by the generator (source: "SMV Approvals" tab in the sheet)
+  try{
+    var BAKED = JSON.parse(document.getElementById('data-appr').textContent || '{}');
+    Object.keys(BAKED).forEach(function(k){
+      var b = BAKED[k]||{}, s = STORE[k]||{};
+      STORE[k] = {p:(b.p||s.p||0), c:(b.c||s.c||0), a:(b.a||s.a||0)};
+    });
+  }catch(e){}
   var REMARKS = {};
   try{ REMARKS = JSON.parse(localStorage.getItem('alel_remarks_v1')||'{}'); }catch(e){}
   var SESSION = null;   // {id,name,role,section}
@@ -1472,20 +1599,41 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
     try{ apply(); }catch(e){}
   }
+  document.addEventListener('click', function(ev){
+    var pbtn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-proc') : null;
+    if(!pbtn) return;
+    ev.preventDefault();
+    var pcard=pbtn.closest('.bulletin');
+    if(pcard) openProc(pcard);
+  });
    document.addEventListener('click', function(ev){
     var abtn=(ev.target && ev.target.closest) ? ev.target.closest('.pulse-appr') : null;
     if(!abtn) return;
     ev.preventDefault();
     var acard=abtn.closest('.bulletin');
     if(!acard) return;
-    if(acard.classList.contains('pulse-card-approved')){
-      acard.classList.remove('pulse-card-approved');
-      abtn.classList.remove('approved');
-      abtn.innerHTML='&#10003; Approve';
-    } else {
+    var acode=acard.getAttribute('data-code')||'';
+    var on=!acard.classList.contains('pulse-card-approved');
+    if(on){
       acard.classList.add('pulse-card-approved');
       abtn.classList.add('approved');
       abtn.innerHTML='&#10004; Approved';
+    } else {
+      acard.classList.remove('pulse-card-approved');
+      abtn.classList.remove('approved');
+      abtn.innerHTML='&#10003; Approve';
+    }
+    if(acode){
+      var st=STORE[acode]||{p:0,c:0,a:0};
+      st.a = on ? 1 : 0;
+      STORE[acode]=st;
+      try{ localStorage.setItem('alel_approvals_v1', JSON.stringify(STORE)); }catch(e){}
+      try{
+        backendCall({action:'approve', code:acode, p:st.p||0, c:st.c||0, a:st.a||0,
+          by:(SESSION&&SESSION.name)||'', at:new Date().toLocaleString()}, function(j){
+          if(j && j.ok===false) console.warn('approve not saved:', j.error);
+        });
+      }catch(e){}
     }
   });
   document.addEventListener('click', function(ev){
@@ -1934,7 +2082,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       b.classList.toggle('hidden',!show);
       if(show){ n++; if(s.a===0) np++; else na++; }
     });
-    // Pulse SMV items (from the Production Dashboard) — show in "all" and "pulse" views
+    // Pulse SMV items (from the Production Dashboard) - show in "all" and "pulse" views
     pulseBullets.forEach(function(b){
       var show = SESSION ? canSee(b) : false;
       if(show && activeSec!=='all' && activeSec!=='pulse') show=false;
@@ -2211,48 +2359,211 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if(s.indexOf("hap")>=0) return "hap";
     return "hap";
   }
+  var PULSE_MD = "https://docs.google.com/spreadsheets/d/1HeKJ0XueH0WeAxLrJpNaNz_pvPuxRDElQmHcPd7QfOQ/gviz/tq?tqx=out:csv&sheet=Master%20Data";
+  var PULSE_PR = "https://docs.google.com/spreadsheets/d/1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo/gviz/tq?tqx=out:csv&gid=988835326";
+  var PULSE_PG = "https://docs.google.com/spreadsheets/d/1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo/gviz/tq?tqx=out:csv&sheet=PG%20LIST";
+  function csvCol(hdr, re){ for(var i=0;i<hdr.length;i++){ if(re.test(hdr[i])) return i; } return -1; }
+  function csvNum(v){ var n=parseFloat(String(v==null?"":v).replace(/[%,\s]/g,"")); return isFinite(n)?n:0; }
+
+  /* ---- manual process modal (for SKUs that have no time study yet) ---- */
+  var PROC_STATE = {code:"", card:null, rows:[]};
+  function procEl(){ return document.getElementById('procModal'); }
+  function buildProcModal(){
+    if(procEl()) return;
+    var m=document.createElement('div');
+    m.id='procModal'; m.className='proc-modal';
+    m.innerHTML =
+      '<div class="proc-card">'+
+        '<div class="proc-h"><h3>Add Process</h3><button type="button" class="proc-x" id="procClose">&times;</button></div>'+
+        '<div class="proc-code" id="procCode"></div>'+
+        '<div class="proc-name" id="procName"></div>'+
+        '<div class="proc-list" id="procList"></div>'+
+        '<div class="proc-form">'+
+          '<label>Operation / Process</label>'+
+          '<input id="procOp" type="text" placeholder="e.g. Fit switch module on base">'+
+          '<div class="proc-2">'+
+            '<div><label>SMV (min)</label><input id="procSmv" type="number" step="0.00001" min="0" placeholder="0.00000"></div>'+
+            '<div><label>Manpower</label><input id="procMp" type="number" step="1" min="0" placeholder="1"></div>'+
+          '</div>'+
+          '<div class="proc-msg" id="procMsg"></div>'+
+          '<div class="proc-actions">'+
+            '<button type="button" id="procSave" class="pulse-appr">&#10003; Add process</button>'+
+            '<button type="button" class="proc-cancel" id="procCancel">Cancel</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e){ if(e.target===m) closeProc(); });
+    document.getElementById('procClose').addEventListener('click', closeProc);
+    document.getElementById('procCancel').addEventListener('click', closeProc);
+    document.getElementById('procSave').addEventListener('click', saveProc);
+    document.getElementById('procOp').addEventListener('keydown', function(e){ if(e.key==='Enter') saveProc(); });
+  }
+  function closeProc(){ var m=procEl(); if(m) m.style.display='none'; }
+  function renderProcList(){
+    var box=document.getElementById('procList'); if(!box) return;
+    if(!PROC_STATE.rows.length){ box.innerHTML='<div class="proc-empty">No manual process yet for this SKU.</div>'; return; }
+    var s='', tSmv=0, tMp=0;
+    PROC_STATE.rows.forEach(function(r,i){
+      tSmv+=r.smv||0; tMp+=r.mp||0;
+      s+='<div class="proc-item"><b>'+(i+1)+'.</b><span>'+r.op+'</span>'+
+         '<em>'+(r.smv?(+r.smv).toFixed(5):'&ndash;')+' min</em>'+
+         '<em>MP '+(r.mp||'&ndash;')+'</em></div>';
+    });
+    s+='<div class="proc-sum">Total SMV <b>'+(+tSmv).toFixed(5)+'</b> min &middot; Manpower <b>'+Math.round(tMp)+'</b></div>';
+    box.innerHTML=s;
+  }
+  function openProc(card){
+    buildProcModal();
+    var code=card.getAttribute('data-code')||'';
+    PROC_STATE.code=code; PROC_STATE.card=card;
+    PROC_STATE.rows = SERVER_PROCS.filter(function(r){ return String(r.code)===String(code); })
+      .map(function(r){ return {op:r.op, smv:+r.smv||0, mp:+r.mp||0}; });
+    document.getElementById('procCode').textContent=code;
+    document.getElementById('procName').textContent=(card.getAttribute('data-name')||'');
+    document.getElementById('procMsg').textContent='';
+    document.getElementById('procOp').value='';
+    document.getElementById('procSmv').value='';
+    document.getElementById('procMp').value='';
+    renderProcList();
+    procEl().style.display='flex';
+    document.getElementById('procOp').focus();
+  }
+  function saveProc(){
+    var code=PROC_STATE.code, msg=document.getElementById('procMsg');
+    var op=(document.getElementById('procOp').value||'').trim();
+    var smv=csvNum(document.getElementById('procSmv').value);
+    var mp=csvNum(document.getElementById('procMp').value);
+    if(!op){ msg.textContent='Operation name likho.'; return; }
+    msg.textContent='Saving...';
+    backendCall({action:'addprocess', code:code, op:op, smv:smv, mp:mp,
+      by:(SESSION&&SESSION.name)||'', at:new Date().toLocaleString()}, function(j){
+      if(j && j.ok){
+        msg.textContent='Saved. Operation Bulletin e next sync e add hobe (~1 min).';
+        PROC_STATE.rows.push({op:op, smv:smv, mp:mp});
+        renderProcList();
+        document.getElementById('procOp').value=''; document.getElementById('procSmv').value=''; document.getElementById('procMp').value='';
+        var sum=0; PROC_STATE.rows.forEach(function(r){ sum+=r.smv||0; });
+        var card=PROC_STATE.card;
+        if(card){
+          var smvEl=card.querySelector('.k-smv .k-val'); if(smvEl && sum>0) smvEl.textContent=(+sum).toFixed(4);
+          var pb=card.querySelector('.pulse-proc'); if(pb) pb.innerHTML='&#43; Process ('+PROC_STATE.rows.length+')';
+        }
+      } else {
+        msg.textContent='Save hoy nai: '+((j&&j.error)||'backend unreachable')+' - Apps Script e notun Code.gs deploy koro.';
+      }
+    });
+  }
+
   function loadPulseSmv(){
-    var url="https://docs.google.com/spreadsheets/d/1HeKJ0XueH0WeAxLrJpNaNz_pvPuxRDElQmHcPd7QfOQ/gviz/tq?tqx=out:csv&sheet=Master%20Data";
-    fetch(url,{cache:"no-store"}).then(function(r){ return r.text(); }).then(function(txt){
-      var rows=parseCsvPulse(txt);
-      var hdr=(rows[0]||[]).map(function(h){ return String(h==null?"":h).trim(); });
-      function col(re){ for(var i=0;i<hdr.length;i++){ if(re.test(hdr[i])) return i; } return -1; }
-      var iCode=col(/item\s*code/i), iName=col(/item\s*name/i), iTp=col(/target\s*productivity/i), iSec=col(/^section$/i), iPg=col(/^pg$/i);
-      var host=listWrap||document.getElementById('listWrap'); if(!host||iCode<0||iName<0||iTp<0) return;
-      var cnt=0;
+    var host=listWrap||document.getElementById('listWrap'); if(!host) return;
+    var pMd=fetch(PULSE_MD,{cache:"no-store"}).then(function(r){ return r.text(); });
+    var pPr=fetch(PULSE_PR,{cache:"no-store"}).then(function(r){ return r.text(); }).catch(function(){ return ""; });
+    var pPg=fetch(PULSE_PG,{cache:"no-store"}).then(function(r){ return r.text(); }).catch(function(){ return ""; });
+    Promise.all([pMd,pPr,pPg]).then(function(res){
+      var md=parseCsvPulse(res[0]||""), pr=parseCsvPulse(res[1]||""), pg=parseCsvPulse(res[2]||"");
+
+      /* ---- manpower per SKU = average of Production Raw rows, rounded to whole operators ---- */
+      var mpAgg={};
+      if(pr.length>1){
+        var hpr=(pr[0]||[]).map(function(h){ return String(h==null?"":h).trim(); });
+        var im=csvCol(hpr,/manpower/i), icp=csvCol(hpr,/item\s*code/i);
+        if(im>=0 && icp>=0){
+          pr.slice(1).forEach(function(r){
+            var c=String(r[icp]||"").trim().replace(/\.0$/,"");
+            var v=csvNum(r[im]);
+            if(!c || !(v>0)) return;
+            var o=mpAgg[c]||{s:0,n:0}; o.s+=v; o.n++; mpAgg[c]=o;
+          });
+        }
+      }
+      function manpowerOf(code){
+        var o=mpAgg[code]; if(!o || !o.n) return null;
+        return Math.round(o.s/o.n);
+      }
+
+      /* ---- PG LIST: every SKU code + its section ---- */
+      var pgByCode={};
+      if(pg.length>1){
+        var hpg=(pg[0]||[]).map(function(h){ return String(h==null?"":h).trim(); });
+        var gpCode=csvCol(hpg,/^code$/i), gpName=csvCol(hpg,/product\s*name/i),
+            gpSec=csvCol(hpg,/^section$/i), gpPg=csvCol(hpg,/^pg$/i), gpSmv=csvCol(hpg,/^smv$/i);
+        if(gpCode>=0){
+          pg.slice(1).forEach(function(r){
+            var c=String(r[gpCode]||"").trim().replace(/\.0$/,"");
+            if(!c || pgByCode[c]) return;
+            pgByCode[c]={name:String(r[gpName]||"").trim(), sec:String(r[gpSec]||"").trim(),
+                         pg:String(r[gpPg]||"").trim(), smv:csvNum(r[gpSmv])};
+          });
+        }
+      }
+
+      var items=[], seen={};
+      /* 1) Master Data rows - have Target Productivity, so SMV is exact */
+      if(md.length>1){
+        var hdr=(md[0]||[]).map(function(h){ return String(h==null?"":h).trim(); });
+        var iCode=csvCol(hdr,/item\s*code/i), iName=csvCol(hdr,/item\s*name/i),
+            iTp=csvCol(hdr,/target\s*productivity/i), iSec=csvCol(hdr,/^section$/i), iPg=csvCol(hdr,/^pg$/i);
+        if(iCode>=0 && iName>=0 && iTp>=0){
+          md.slice(1).forEach(function(r){
+            var code=String(r[iCode]||"").trim().replace(/\.0$/,"");
+            var name=String(r[iName]||"").trim();
+            var tp=csvNum(r[iTp]);
+            if(!code || !name || !(tp>0)) return;
+            if(codeOf[code] || PULSE_HIDDEN.indexOf(code)>=0 || seen[code]) return;
+            var pinfo=pgByCode[code]||{};
+            seen[code]=1;
+            items.push({code:code, name:pinfo.name||name, smv:60/tp, tp:tp,
+                        sec:(pinfo.sec?String(pinfo.sec).toLowerCase():pulseSection(String(r[iPg]||""), String(r[iSec]||""))),
+                        from:"md"});
+          });
+        }
+      }
+      /* 2) PG LIST SKUs that have no bulletin and no Master Data row - new SKUs show up here */
+      Object.keys(pgByCode).forEach(function(code){
+        if(codeOf[code] || PULSE_HIDDEN.indexOf(code)>=0 || seen[code]) return;
+        var p=pgByCode[code];
+        seen[code]=1;
+        items.push({code:code, name:p.name||code, smv:(p.smv>0?p.smv:null),
+                    tp:(p.smv>0?(60/p.smv):null),
+                    sec:(p.sec?String(p.sec).toLowerCase():pulseSection(p.pg,"")),
+                    from:"pg"});
+      });
+
       var icSmv='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
       var icProd='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
       var icCode='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18 22 12 16 6"/><path d="m8 6-6 6 6 6"/></svg>';
-      rows.slice(1).forEach(function(r){
-        var code=String(r[iCode]||"").trim();
-        var name=String(r[iName]||"").trim();
-        var tp=parseFloat(String(r[iTp]||"").replace(/[%,]/g,""));
-        if(!code||!name||!(tp>0)) return;
-        if(codeOf[code]) return;
-        if(PULSE_HIDDEN.indexOf(code)>=0) return;
-        var smv=60/tp;
-        var sec=pulseSection(String(r[iPg]||""), String(r[iSec]||""));
+      var icMp=icProd;
+      var cnt=0;
+
+      items.forEach(function(it){
+        var code=it.code, name=it.name, smv=it.smv, tp=it.tp, sec=it.sec;
+        var mp=manpowerOf(code);
+        var st=STORE[code]||{};
         var b=document.createElement('section');
-        b.className='bulletin pulse-bulletin';
+        b.className='bulletin pulse-bulletin'+(st.a?' pulse-card-approved':'');
         b.setAttribute('data-code',code);
         b.setAttribute('data-name',name.toLowerCase());
         b.setAttribute('data-sec',sec);
-        b.setAttribute('data-smv',smv);
+        b.setAttribute('data-smv',smv||0);
+        b.setAttribute('data-mp',mp||0);
         b.setAttribute('data-pulse','1');
         b.innerHTML =
           '<div class="b-head pulse-head">'+
             '<div class="b-brand">'+
               '<div class="b-eyebrow">Production Dashboard &middot; Pulse SMV</div>'+
               '<h2 class="b-title">'+escH(name)+'</h2>'+
-              '<div class="b-sub">Standard SMV from Target Productivity &middot; no Operation Bulletin yet</div>'+
+              '<div class="b-sub">'+(it.from==='pg'?'From PG LIST &middot; no time study yet':'Standard SMV from Target Productivity &middot; no Operation Bulletin yet')+'</div>'+
             '</div>'+
             '<div class="b-badges"><span class="obn pulse-obn">PULSE</span><span class="secp sec-'+escH(sec)+'">'+escH(sec.toUpperCase())+'</span>'+
-              '<button class="pulse-appr" type="button" data-appr="'+escH(code)+'" title="Approve this SKU">&#10003; Approve</button>'+
+              '<button class="pulse-appr'+(st.a?' approved':'')+'" type="button" data-appr="'+escH(code)+'" title="Approve this SKU">'+(st.a?'&#10004; Approved':'&#10003; Approve')+'</button>'+
+              '<button class="pulse-proc" type="button" data-proc="'+escH(code)+'" title="Add processes for this SKU">&#43; Process (0)</button>'+
               '<button class="pulse-del" type="button" data-del="'+escH(code)+'" title="Delete this SKU from Pulse SMV">&#128465; Delete</button></div>'+
           '</div>'+
           '<div class="kpis pulse-kpis">'+
-            '<div class="kpi k-smv"><div class="k-top">'+icSmv+'<span>Total SMV</span></div><div class="k-val">'+smv.toFixed(4)+'</div><div class="k-unit">min / pc</div></div>'+
-            '<div class="kpi k-prod"><div class="k-top">'+icProd+'<span>Target Productivity</span></div><div class="k-val">'+Math.round(tp).toLocaleString()+'</div><div class="k-unit">pcs / op-hr</div></div>'+
+            '<div class="kpi k-smv"><div class="k-top">'+icSmv+'<span>Total SMV</span></div><div class="k-val">'+(smv?(+smv).toFixed(4):'&ndash;')+'</div><div class="k-unit">min / pc</div></div>'+
+            '<div class="kpi k-mp"><div class="k-top">'+icMp+'<span>Manpower</span></div><div class="k-val">'+(mp!=null?mp:'&ndash;')+'</div><div class="k-unit">operators</div></div>'+
+            '<div class="kpi k-prod"><div class="k-top">'+icProd+'<span>Target Productivity</span></div><div class="k-val">'+(tp?Math.round(tp).toLocaleString():'&ndash;')+'</div><div class="k-unit">pcs / op-hr</div></div>'+
             '<div class="kpi k-ops"><div class="k-top">'+icCode+'<span>Item Code</span></div><div class="k-val pc-val">'+escH(code)+'</div><div class="k-unit">SKU</div></div>'+
           '</div>';
         pulseBullets.push(b);

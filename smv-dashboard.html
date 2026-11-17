@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ALEL SMV Dashboard — Complete / Approved / Pending</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --ink:#0f172a; --mut:#6b7a90; --line:#e6edf6; --teal:#12b886; --teal-d:#0b7a5f;
+    --blue:#3b62c7; --amber:#e8962f; --red:#e2564a; --card:#ffffff;
+  }
+  body{
+    font-family:'Inter',system-ui,Arial,sans-serif;color:var(--ink);min-height:100vh;
+    background:radial-gradient(1100px 520px at 88% -12%,rgba(18,184,134,.16),transparent 60%),
+               radial-gradient(900px 520px at -10% 108%,rgba(59,98,199,.14),transparent 55%),
+               linear-gradient(170deg,#f7fafd,#eef3fa);
+    padding:0 16px 64px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+  header.hero{padding:34px 0 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .logo{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;font-size:24px;
+        background:linear-gradient(135deg,#12b886,#0b7a5f);color:#fff;box-shadow:0 12px 28px rgba(18,184,134,.35);}
+  .hero h1{font-family:'Sora',sans-serif;font-size:23px;letter-spacing:-.02em;}
+  .hero p{font-size:12.5px;color:var(--mut);margin-top:3px;}
+  .hero .spacer{flex:1;}
+  .hero .meta{font-size:11.5px;color:var(--mut);text-align:right;font-weight:600;}
+  .hero .meta b{color:var(--ink);}
+  .hero a.btn{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font:700 12.5px Inter,sans-serif;
+    color:#fff;background:linear-gradient(135deg,#3b62c7,#2b4aa0);padding:10px 16px;border-radius:11px;
+    box-shadow:0 10px 24px rgba(59,98,199,.28);}
+  .hero a.btn:hover{filter:brightness(1.06);}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:6px 0 22px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;
+       box-shadow:0 10px 26px rgba(16,32,64,.06);cursor:pointer;transition:transform .12s,box-shadow .12s;}
+  .kpi:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(16,32,64,.10);}
+  .kpi .lab{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);}
+  .kpi .val{font-family:'Sora',sans-serif;font-size:30px;font-weight:800;margin-top:6px;letter-spacing:-.02em;}
+  .kpi .sub{font-size:11.5px;color:var(--mut);font-weight:600;margin-top:2px;}
+  .kpi.k-total .val{color:var(--ink);}
+  .kpi.k-comp .val{color:var(--blue);}
+  .kpi.k-appr .val{color:var(--teal-d);}
+  .kpi.k-pend .val{color:var(--amber);}
+  .kpi.on{outline:2px solid rgba(18,184,134,.55);outline-offset:2px;}
+
+  h2.sec-h{font-family:'Sora',sans-serif;font-size:15px;margin:22px 0 10px;letter-spacing:-.01em;}
+  .sections{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 10px 26px rgba(16,32,64,.06);}
+  .scard .top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .scard .dot{width:10px;height:10px;border-radius:50%;}
+  .scard .nm{font-family:'Sora',sans-serif;font-weight:800;font-size:15px;}
+  .scard .tag{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;background:#f2f6fb;color:var(--mut);}
+  .srow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .cell{border:1px solid var(--line);border-radius:12px;padding:9px 11px;cursor:pointer;transition:background .12s;}
+  .cell:hover{background:#f7fbff;}
+  .cell.on{background:#eefaf5;border-color:rgba(18,184,134,.5);}
+  .cell .l{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);}
+  .cell .v{font-family:'Sora',sans-serif;font-size:19px;font-weight:800;margin-top:2px;}
+  .cell.c-comp .v{color:var(--blue);} .cell.c-appr .v{color:var(--teal-d);}
+  .cell.c-pend .v{color:var(--amber);} .cell.c-nost .v{color:var(--red);}
+
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:22px 0 10px;}
+  .chip{border:1px solid var(--line);background:#fff;color:var(--mut);border-radius:999px;padding:8px 14px;
+    font:700 12px Inter,sans-serif;cursor:pointer;}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .chip i{font-style:normal;margin-left:6px;opacity:.75;}
+  .bar input{flex:1;min-width:180px;padding:10px 13px;border:1px solid var(--line);border-radius:11px;
+    font:600 13px Inter,sans-serif;outline:none;background:#fff;}
+  .bar input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(18,184,134,.14);}
+
+  .tbl{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 10px 26px rgba(16,32,64,.06);}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{background:#f6f9fd;text-align:left;padding:11px 14px;font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td{padding:10px 14px;border-bottom:1px solid #f0f4fa;vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:hover{background:#fbfdff;}
+  td.code{font-weight:700;font-variant-numeric:tabular-nums;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;}
+  .p-appr{background:#e6f8f1;color:var(--teal-d);}
+  .p-comp{background:#e9f0ff;color:#2b4aa0;}
+  .p-open{background:#fff4e3;color:#a8630c;}
+  .p-nost{background:#fdeceb;color:#b3372d;}
+  .s-gss{color:#3b62c7;} .s-led{color:#c98a1e;} .s-hap{color:#0b7a5f;}
+  .empty{padding:26px 14px;text-align:center;color:var(--mut);font-size:13px;}
+  .foot{margin-top:18px;font-size:11.5px;color:var(--mut);text-align:center;}
+  .load{padding:16px;font-size:12.5px;color:var(--mut);}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);}.sections{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="logo">&#128202;</div>
+    <div>
+      <h1>ALEL SMV Dashboard</h1>
+      <p>Section-wise SMV coverage &middot; complete, approved and pending</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">Source: PG LIST + Operation Bulletin<br>Updated <b id="stamp">&mdash;</b></div>
+    <a class="btn" href="operation-bulletin.html">&#8592; Operation Bulletin</a>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi k-total" data-f="all"><div class="lab">Total SKU</div><div class="val" id="kTotal">0</div><div class="sub" id="kTotalSub">in PG LIST</div></div>
+    <div class="kpi k-comp" data-f="complete"><div class="lab">Complete</div><div class="val" id="kComp">0</div><div class="sub">SMV study exists</div></div>
+    <div class="kpi k-appr" data-f="approved"><div class="lab">Approved</div><div class="val" id="kAppr">0</div><div class="sub">click to see list</div></div>
+    <div class="kpi k-pend" data-f="pending"><div class="lab">Pending</div><div class="val" id="kPend">0</div><div class="sub">not approved yet</div></div>
+  </div>
+
+  <h2 class="sec-h">By section</h2>
+  <div class="sections" id="sections"></div>
+
+  <div class="bar">
+    <button class="chip on" data-f="all">All <i id="cAll">0</i></button>
+    <button class="chip" data-f="complete">Complete <i id="cComp">0</i></button>
+    <button class="chip" data-f="approved">Approved <i id="cAppr">0</i></button>
+    <button class="chip" data-f="pending">Pending <i id="cPend">0</i></button>
+    <button class="chip" data-f="nostudy">No study <i id="cNo">0</i></button>
+    <input id="q" type="search" placeholder="Search SKU code or name...">
+  </div>
+
+  <div class="tbl">
+    <div class="load" id="load">Loading sheet data...</div>
+    <table id="tbl" style="display:none">
+      <thead><tr>
+        <th>Item Code</th><th>Product Name</th><th>Section</th>
+        <th style="text-align:right">SMV</th><th style="text-align:right">MP</th>
+        <th>Study</th><th>Approval</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="foot">ALEL &middot; Operational Excellence &middot; approval state is read from the <b>SMV Approvals</b> sheet tab</div>
+</div>
+
+<script>
+(function(){
+  var SHEET_PG = "1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo";
+  var URL_PG   = "https://docs.google.com/spreadsheets/d/"+SHEET_PG+"/gviz/tq?tqx=out:csv&sheet=PG%20LIST";
+  var URL_APPR = "https://docs.google.com/spreadsheets/d/"+SHEET_PG+"/gviz/tq?tqx=out:csv&sheet=SMV%20Approvals";
+  var URL_IDX  = "ob-home.html";
+
+  var ROWS = [], FILTER = "all", Q = "", SECF = "";
+
+  function parseCsv(text){
+    var rows=[], row=[], f="", q=false;
+    for(var i=0;i<text.length;i++){
+      var c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+      else if(c==='"') q=true;
+      else if(c===","){ row.push(f); f=""; }
+      else if(c.charCodeAt(0)===10){ row.push(f); rows.push(row); row=[]; f=""; }
+      else if(c.charCodeAt(0)!==13) f+=c;
+    }
+    if(f.length||row.length){ row.push(f); rows.push(row); }
+    return rows;
+  }
+  function col(hdr, re){ for(var i=0;i<hdr.length;i++){ if(re.test(String(hdr[i]||"").trim())) return i; } return -1; }
+  function num(v){ var n=parseFloat(String(v==null?"":v).replace(/[%,\s]/g,"")); return isFinite(n)?n:0; }
+  function txt(v){ return String(v==null?"":v).replace(/\s+/g," ").trim(); }
+
+  function fmt(n, d){ return n==null ? "&ndash;" : (+n).toFixed(d); }
+
+  function load(){
+    var pPg = fetch(URL_PG,{cache:"no-store"}).then(function(r){ return r.text(); });
+    var pAp = fetch(URL_APPR,{cache:"no-store"}).then(function(r){ return r.text(); }).catch(function(){ return ""; });
+    var pIx = fetch(URL_IDX,{cache:"no-store"}).then(function(r){ return r.text(); }).then(function(t){
+    var m = t.match(/<script id="data-index"[^>]*>([\s\S]*?)<\/script>/);
+    if(!m) return [];
+    try { return JSON.parse(m[1]); } catch(e){ return []; }
+  }).catch(function(){ return []; });
+
+    Promise.all([pPg,pAp,pIx]).then(function(res){
+      var pgCsv = parseCsv(res[0]||""), apCsv = res[1]?parseCsv(res[1]):[], idx = res[2]||[];
+
+      var idxMap = {};
+      (Array.isArray(idx)?idx:[]).forEach(function(o){ if(o && o.c) idxMap[String(o.c)] = o; });
+
+      var apprMap = {};
+      if(apCsv.length>1){
+        var ha = (apCsv[0]||[]);
+        var ca = col(ha,/^code$/i), aa = col(ha,/^a$/i);
+        if(ca>=0){
+          apCsv.slice(1).forEach(function(r){
+            var c = txt(r[ca]).replace(/\.0$/,""); if(!c) return;
+            if(aa>=0 && num(r[aa])>0) apprMap[c]=1;
+          });
+        }
+      }
+
+      var hdr = pgCsv[0]||[];
+      var cCode = col(hdr,/^code$/i), cName = col(hdr,/product\s*name/i),
+          cSec = col(hdr,/^section$/i), cSmv = col(hdr,/^smv$/i), cPg = col(hdr,/^pg$/i);
+      var map = {};
+      pgCsv.slice(1).forEach(function(r){
+        var code = txt(r[cCode]).replace(/\.0$/,"");
+        if(!code) return;
+        var i = idxMap[code] || null;
+        var sec = txt(r[cSec]).toUpperCase();
+        var pg  = txt(r[cPg]);
+        if(!sec){
+          var p = pg.toLowerCase();
+          sec = (p.indexOf("gss")>=0||p.indexOf("switch")>=0||p.indexOf("socket")>=0||p.indexOf("mcb")>=0) ? "GSS"
+              : (p.indexOf("led")>=0||p.indexOf("light")>=0||p.indexOf("panel")>=0) ? "LED"
+              : (p.indexOf("hap")>=0||p.indexOf("kettle")>=0||p.indexOf("cooker")>=0) ? "HAP" : "OTHER";
+        }
+        var smv = i && i.smv ? +i.smv : (num(r[cSmv])>0 ? num(r[cSmv]) : null);
+        map[code] = {
+          code: code,
+          name: (i && i.n) ? i.n : (txt(r[cName]) || code),
+          sec: sec,
+          smv: smv,
+          mp: (i && i.mp) ? +i.mp : null,
+          ops: i ? (+i.ops||0) : 0,
+          complete: !!(i && (+i.ops||0) > 0),
+          approved: !!(apprMap[code] || (i && +i.appr === 1))
+        };
+      });
+
+      ROWS = Object.keys(map).map(function(k){ return map[k]; });
+      ROWS.sort(function(a,b){ return (a.sec+ a.name).localeCompare(b.sec + b.name); });
+
+      document.getElementById('load').style.display='none';
+      document.getElementById('tbl').style.display='table';
+      document.getElementById('stamp').textContent = new Date().toLocaleString();
+      render();
+    }).catch(function(e){
+      document.getElementById('load').innerHTML = 'Load failed: ' + (e && e.message ? e.message : e) +
+        '<br><small>Sheet ta "anyone with the link" share kora ache kina check koro.</small>';
+    });
+  }
+
+  function match(r){
+    if(SECF && r.sec !== SECF) return false;
+    if(FILTER==='complete' && !r.complete) return false;
+    if(FILTER==='approved' && !r.approved) return false;
+    if(FILTER==='pending'  && r.approved) return false;
+    if(FILTER==='nostudy'  && r.complete) return false;
+    if(Q){
+      var s=(r.code+' '+r.name).toLowerCase();
+      if(s.indexOf(Q)<0) return false;
+    }
+    return true;
+  }
+
+  function render(){
+    var tot=ROWS.length, comp=0, appr=0, pend=0, no=0;
+    var secAgg={};
+    ROWS.forEach(function(r){
+      if(r.complete) comp++;
+      if(r.approved) appr++; else pend++;
+      if(!r.complete) no++;
+      var s=r.sec||'OTHER';
+      var a=secAgg[s]||(secAgg[s]={tot:0,comp:0,appr:0,pend:0,no:0});
+      a.tot++; if(r.complete)a.comp++; if(r.approved)a.appr++; else a.pend++; if(!r.complete)a.no++;
+    });
+
+    document.getElementById('kTotal').textContent=tot;
+    document.getElementById('kComp').textContent=comp;
+    document.getElementById('kAppr').textContent=appr;
+    document.getElementById('kPend').textContent=pend;
+    document.getElementById('cAll').textContent=tot;
+    document.getElementById('cComp').textContent=comp;
+    document.getElementById('cAppr').textContent=appr;
+    document.getElementById('cPend').textContent=pend;
+    document.getElementById('cNo').textContent=no;
+
+    var order=['GSS','LED','HAP','OTHER'], colors={GSS:'#3b62c7',LED:'#e8962f',HAP:'#12b886',OTHER:'#8a97a8'};
+    var html='';
+    order.forEach(function(s){
+      var a=secAgg[s]; if(!a) return;
+      html+='<div class="scard" data-sec="'+s+'">'+
+        '<div class="top"><span class="dot" style="background:'+colors[s]+'"></span>'+
+        '<span class="nm">'+s+' Section</span><span class="tag">'+a.tot+' SKU</span></div>'+
+        '<div class="srow">'+
+          '<div class="cell c-comp" data-sec="'+s+'" data-f="complete"><div class="l">Complete</div><div class="v">'+a.comp+'</div></div>'+
+          '<div class="cell c-appr" data-sec="'+s+'" data-f="approved"><div class="l">Approved</div><div class="v">'+a.appr+'</div></div>'+
+          '<div class="cell c-pend" data-sec="'+s+'" data-f="pending"><div class="l">Pending</div><div class="v">'+a.pend+'</div></div>'+
+          '<div class="cell c-nost" data-sec="'+s+'" data-f="nostudy"><div class="l">No study</div><div class="v">'+a.no+'</div></div>'+
+        '</div></div>';
+    });
+    document.getElementById('sections').innerHTML=html;
+
+    var rows=ROWS.filter(match);
+    var tb=document.getElementById('tbody');
+    if(!rows.length){
+      tb.innerHTML='<tr><td colspan="7"><div class="empty">Kono SKU nei ei filter e.</div></td></tr>';
+      return;
+    }
+    var s='';
+    rows.forEach(function(r){
+      var st = r.approved ? '<span class="pill p-appr">Approved</span>'
+             : r.complete ? '<span class="pill p-comp">Complete</span>'
+             : '<span class="pill p-nost">No study</span>';
+      s+='<tr>'+
+        '<td class="code">'+r.code+'</td>'+
+        '<td>'+r.name+'</td>'+
+        '<td class="s-'+r.sec.toLowerCase()+'"><b>'+r.sec+'</b></td>'+
+        '<td class="num">'+fmt(r.smv,4)+'</td>'+
+        '<td class="num">'+(r.mp!=null?Math.round(r.mp):'&ndash;')+'</td>'+
+        '<td>'+(r.complete?'<span class="pill p-comp">'+r.ops+' ops</span>':'<span class="pill p-nost">none</span>')+'</td>'+
+        '<td>'+st+'</td>'+
+      '</tr>';
+    });
+    tb.innerHTML=s;
+  }
+
+  document.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      document.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on');
+      FILTER=c.getAttribute('data-f'); SECF='';
+      document.querySelectorAll('.kpi').forEach(function(k){ k.classList.remove('on'); });
+      document.querySelectorAll('.cell').forEach(function(k){ k.classList.remove('on'); });
+      render();
+    });
+  });
+  document.querySelectorAll('.kpi').forEach(function(k){
+    k.addEventListener('click', function(){
+      FILTER=k.getAttribute('data-f'); SECF=''; Q='';
+      document.getElementById('q').value='';
+      document.querySelectorAll('.kpi').forEach(function(x){ x.classList.remove('on'); });
+      k.classList.add('on');
+      document.querySelectorAll('.cell').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.chip').forEach(function(x){
+        x.classList.toggle('on', x.getAttribute('data-f')===FILTER);
+      });
+      render();
+      document.querySelector('.bar').scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+  document.getElementById('sections').addEventListener('click', function(ev){
+    var cell=ev.target.closest('.cell'); if(!cell) return;
+    FILTER=cell.getAttribute('data-f')||'all';
+    SECF=cell.getAttribute('data-sec')||'';
+    Q=''; document.getElementById('q').value='';
+    document.querySelectorAll('.cell').forEach(function(x){ x.classList.remove('on'); });
+    cell.classList.add('on');
+    document.querySelectorAll('.chip').forEach(function(x){
+      x.classList.toggle('on', x.getAttribute('data-f')===FILTER);
+    });
+    render();
+    document.querySelector('.bar').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+  document.getElementById('q').addEventListener('input', function(e){
+    Q=e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

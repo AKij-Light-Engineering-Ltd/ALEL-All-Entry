@@ -33,8 +33,29 @@
 var USERS_SHEET    = "Users";
 var REQUESTS_SHEET = "Requests";
 var REMARKS_SHEET  = "Remarks";
+var APPROV_TAB     = "SMV Approvals";
+var OPS_TAB        = "Manual Ops";
 var PROP_USERS     = "ALEL_USERS";
 var PROP_REQS      = "ALEL_REQUESTS";
+
+// Approvals + manually typed operations are written into the SAME spreadsheet
+// that feeds the Operation Bulletin generator, so the generator can pick them
+// up without any extra fetch. Falls back to the bound spreadsheet on error.
+var PG_SHEET_ID    = "1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo";
+
+function pgSheet_(tab) {
+  var ss = null;
+  try { ss = SpreadsheetApp.openById(PG_SHEET_ID); } catch (e) { ss = null; }
+  if (!ss) ss = ss_();
+  var sh = ss.getSheetByName(tab);
+  if (!sh) sh = ss.insertSheet(tab);
+  if (sh.getLastRow() === 0) {
+    if (tab === APPROV_TAB) sh.getRange(1, 1, 1, 6).setValues([["Code", "P", "C", "A", "By", "At"]]);
+    if (tab === OPS_TAB)    sh.getRange(1, 1, 1, 7).setValues([["Code", "Operation", "SMV", "Manpower", "Line", "By", "At"]]);
+  }
+  return sh;
+}
+
 
 // ---------------------------------------------------------------------------
 // WEB APP ENTRY POINTS
@@ -76,6 +97,9 @@ function handle(p) {
     case "removeRequest": return doRemoveRequest(p);
     case "deluser":       return doDelUser(p);
     case "remark":        return doRemark(p);
+    case "approve":       return doApprove(p);
+    case "addprocess":    return doAddProcess(p);
+    case "delprocess":    return doDelProcess(p);
     default:
       return { ok: false, error: "Unknown action: " + action };
   }
@@ -86,8 +110,102 @@ function handle(p) {
 // ---------------------------------------------------------------------------
 
 function doList() {
-  return { ok: true, users: readUsers(), requests: readRequests(), approvals: [], remarks: readRemarks() };
+  return { ok: true, users: readUsers(), requests: readRequests(),
+           approvals: readApprovals(), remarks: readRemarks(), processes: readProcesses() };
 }
+
+/** 3-stage approval state for one SKU: P = prepared, C = checked, A = approved. */
+function doApprove(p) {
+  var code = String(p.code || "").trim();
+  if (!code) return { ok: false, error: "No code" };
+  var rows = readApprovals().filter(function (r) { return r.code !== code; });
+  rows.push({
+    code: code,
+    p: Number(p.p || 0) ? 1 : 0,
+    c: Number(p.c || 0) ? 1 : 0,
+    a: Number(p.a || 0) ? 1 : 0,
+    by: String(p.by || ""),
+    at: String(p.at || new Date().toLocaleString())
+  });
+  writeApprovals(rows);
+  return { ok: true };
+}
+
+/** One operation line typed from the page for a SKU that has no time study. */
+function doAddProcess(p) {
+  var code = String(p.code || "").trim();
+  var op   = String(p.op || "").trim();
+  if (!code || !op) return { ok: false, error: "Code and operation are required" };
+  var sh = pgSheet_(OPS_TAB);
+  sh.appendRow([
+    code, op,
+    Number(p.smv || 0) || "",
+    Number(p.mp || 0) || "",
+    String(p.line || ""),
+    String(p.by || ""),
+    String(p.at || new Date().toLocaleString())
+  ]);
+  var n = readProcesses().filter(function (r) { return r.code === code; }).length;
+  return { ok: true, count: n };
+}
+
+function doDelProcess(p) {
+  var code = String(p.code || "").trim();
+  var op   = String(p.op || "").trim();
+  if (!code) return { ok: false, error: "No code" };
+  var rows = readProcesses().filter(function (r) {
+    return !(r.code === code && (!op || r.op === op));
+  });
+  writeProcesses(rows);
+  return { ok: true };
+}
+
+function readApprovals() {
+  var sh = pgSheet_(APPROV_TAB);
+  var data = sh.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[0]) continue;
+    out.push({ code: String(row[0]).replace(/\.0$/, ""), p: Number(row[1] || 0) ? 1 : 0,
+               c: Number(row[2] || 0) ? 1 : 0, a: Number(row[3] || 0) ? 1 : 0,
+               by: String(row[4] || ""), at: String(row[5] || "") });
+  }
+  return out;
+}
+
+function writeApprovals(rows) {
+  var sh = pgSheet_(APPROV_TAB);
+  sh.clearContents();
+  var out = [["Code", "P", "C", "A", "By", "At"]];
+  rows.forEach(function (r) { out.push([r.code, r.p, r.c, r.a, r.by || "", r.at || ""]); });
+  sh.getRange(1, 1, out.length, 6).setValues(out);
+}
+
+function readProcesses() {
+  var sh = pgSheet_(OPS_TAB);
+  var data = sh.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[0] || !row[1]) continue;
+    out.push({ code: String(row[0]).replace(/\.0$/, ""), op: String(row[1]),
+               smv: Number(row[2] || 0), mp: Number(row[3] || 0),
+               line: String(row[4] || ""), by: String(row[5] || ""), at: String(row[6] || "") });
+  }
+  return out;
+}
+
+function writeProcesses(rows) {
+  var sh = pgSheet_(OPS_TAB);
+  sh.clearContents();
+  var out = [["Code", "Operation", "SMV", "Manpower", "Line", "By", "At"]];
+  rows.forEach(function (r) {
+    out.push([r.code, r.op, r.smv || "", r.mp || "", r.line || "", r.by || "", r.at || ""]);
+  });
+  sh.getRange(1, 1, out.length, 7).setValues(out);
+}
+
 
 /** Save (or update) the remarks for one bulletin, keyed by its item code. */
 function doRemark(p) {
