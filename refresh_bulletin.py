@@ -27,7 +27,7 @@ OUT_HOME = os.path.join(HERE, "ob-home.html")
 HOME_URL = "operation-bulletin.html"   # relative link used by the topbar logo (goes to home view of this file)
 
 # Google Apps Script backend web-app URL (deploy Code.gs). Leave "" for offline/localStorage only.
-BACKEND_URL = "https://script.google.com/macros/s/AKfycbwjFGmmLWO7nzqMCp8SleOBIRXPOz9EQmtFJPQal4etuzxJ0pvwhR5dC_TFQ8QKKzuY/exec"
+BACKEND_URL = "https://script.google.com/macros/s/AKfycbzDVpC-tm_KHkvEwt19aM_ttWckDFawrTWtb_jh9D7X1matnRchBbAEthgrd8Bbobia/exec"
 
 MAX_SIDE = 520  # px for embedded product images
 
