@@ -226,6 +226,15 @@ def parse_sheet(ws, sno2img):
     return meta
 
 
+def _norm_code(v):
+    if v is None:
+        return ""
+    c = str(v).strip()
+    if c.endswith(".0"):
+        c = c[:-2]
+    return c
+
+
 def parse_all():
     log("[2/4] Parsing workbook tabs ...")
     import openpyxl
