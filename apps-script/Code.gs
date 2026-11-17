@@ -371,7 +371,6 @@ function initSheets() {
 function readUsers() {
   ensureSheets_();
   var sheet = ss_().getSheetByName(USERS_SHEET);
-  if (sheet.getLastRow() === 0) { initSheets(); sheet = ss_().getSheetByName(USERS_SHEET); }
   var data  = sheet.getDataRange().getValues();
   var users = [];
   for (var i = 0; i < data.length; i++) {
