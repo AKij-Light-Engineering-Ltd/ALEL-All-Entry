@@ -257,12 +257,13 @@
     var secAgg={};
     ROWS.forEach(function(r){
       if(r.complete) comp++;
-      if(r.approved) appr++; else pend++;
+      if(r.approved) appr++;
       if(!r.complete) no++;
       var s=r.sec||'OTHER';
       var a=secAgg[s]||(secAgg[s]={tot:0,comp:0,appr:0,pend:0,no:0});
-      a.tot++; if(r.complete)a.comp++; if(r.approved)a.appr++; else a.pend++; if(!r.complete)a.no++;
+      a.tot++; if(r.complete)a.comp++; if(r.approved)a.appr++; a.pend = a.comp - a.appr; if(!r.complete)a.no++;
     });
+    pend = comp - appr;
 
     document.getElementById('kTotal').textContent=tot;
     document.getElementById('kComp').textContent=comp;
