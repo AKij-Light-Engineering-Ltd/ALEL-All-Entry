@@ -42,6 +42,8 @@ var PROP_REQS      = "ALEL_REQUESTS";
 // that feeds the Operation Bulletin generator, so the generator can pick them
 // up without any extra fetch. Falls back to the bound spreadsheet on error.
 var PG_SHEET_ID    = "1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo";
+var SMV_SRC_SHEET_ID = "1IFzKrPEqEbCoEvXV0vrXDShN-xH0InOX43VhLaQnlys";
+var SMV_SRC_TAB     = "Data";
 
 function pgSheet_(tab) {
   var ss = null;
@@ -100,6 +102,7 @@ function handle(p) {
     case "approve":       return doApprove(p);
     case "addprocess":    return doAddProcess(p);
     case "delprocess":    return doDelProcess(p);
+    case "addsmv":       return doAddSmv(p);
     default:
       return { ok: false, error: "Unknown action: " + action };
   }
@@ -158,6 +161,36 @@ function doDelProcess(p) {
   });
   writeProcesses(rows);
   return { ok: true };
+}
+
+/** Add / update SMV (Target Productivity) rows from the owner's SMV master sheet. */
+function doAddSmv(p) {
+  var rows = (p && p.rows) || [];
+  if (!rows.length) return { ok: false, error: "No rows" };
+  var ss = null;
+  try { ss = SpreadsheetApp.openById(SMV_SRC_SHEET_ID); } catch (e) { ss = null; }
+  if (!ss) ss = ss_();
+  var sh = ss.getSheetByName(SMV_SRC_TAB);
+  if (!sh) return { ok: false, error: "Sheet not found: " + SMV_SRC_TAB };
+  var data = sh.getDataRange().getValues();
+  var out = [data[0].slice()];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i].slice();
+    var code = String(r[0] || "").replace(/\.0$/, "");
+    var match = null;
+    for (var j = 0; j < rows.length; j++) {
+      if (String(rows[j].code || "") === code) { match = rows[j]; break; }
+    }
+    if (match) {
+      r[2] = Number(match.smv || 0) || "";
+      if (match.pg) r[3] = match.pg;
+      if (match.sec) r[6] = match.sec;
+      if (match.line) r[5] = match.line;
+    }
+    out.push(r);
+  }
+  sh.getRange(1, 1, out.length, out[0].length).setValues(out);
+  return { ok: true, count: rows.length };
 }
 
 function readApprovals() {
