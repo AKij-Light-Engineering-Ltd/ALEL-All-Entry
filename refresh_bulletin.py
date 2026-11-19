@@ -20,6 +20,8 @@ import urllib.request
 import datetime
 
 SHEET_ID = "1GpALH7TsJ0eW-Ko8ejzV8oQF073dhe7Eb9930o0qvSo"
+SMV_SRC_SHEET_ID = "1IFzKrPEqEbCoEvXV0vrXDShN-xH0InOX43VhLaQnlys"   # owner SMV master sheet (Item Code / Item Name / Target Productivity / PG / Section)
+SMV_SRC_TMP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_latest_smv_source.xlsx")
 HERE = os.path.dirname(os.path.abspath(__file__))
 XLSX_TMP = os.path.join(HERE, "_latest_capacity_study.xlsx")
 OUT_HTML = os.path.join(HERE, "ALEL_Operation_Bulletin_Searchable.html")
@@ -93,6 +95,27 @@ def download():
             last = e
             log("      attempt %d failed: %s" % (attempt, e))
     raise SystemExit("Download failed after 3 tries: %s" % last)
+
+
+def download_smv_source():
+    url = f"https://docs.google.com/spreadsheets/d/{SMV_SRC_SHEET_ID}/export?format=xlsx"
+    log("[1/4] Downloading SMV source Google Sheet ...")
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+    last = None
+    for attempt in range(1, 4):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                data = r.read()
+            if len(data) < 1000:
+                raise RuntimeError("Unexpected small response: %d bytes" % len(data))
+            with open(SMV_SRC_TMP, "wb") as f:
+                f.write(data)
+            log("      saved %.1f MB" % (len(data) / 1048576))
+            return
+        except Exception as e:
+            last = e
+            log("      attempt %d failed: %s" % (attempt, e))
+    raise SystemExit("SMV source download failed after 3 tries: %s" % last)
 
 
 # --------------------------------------------------------------------------
@@ -316,6 +339,57 @@ def parse_all():
     except Exception as e:
         log("      (PG LIST read skipped: %s)" % e)
     log("      PG LIST: %d SKU rows" % len(code2pg))
+    smv_src = {}
+    try:
+        if os.path.exists(SMV_SRC_TMP):
+            import openpyxl as _op
+            _wbo = _op.load_workbook(SMV_SRC_TMP, read_only=True, data_only=True)
+            _tabs = [t for t in _wbo.sheetnames if str(t).strip().lower() in ("data", "smv", "sheet1", "master data", "skus")]
+            _done = False
+            for _t in _tabs:
+                _ws = _wbo[_t]
+                for _row in _ws.iter_rows(min_row=2):
+                    _vals = []
+                    for _i in range(min(len(_row), 8)):
+                        _v = _row[_i].value
+                        _vals.append("" if _v is None else str(_v).strip())
+                    _c = str(_vals[0] or "").replace(".0", "")
+                    if not _c or not _c.isdigit():
+                        continue
+                    _tp = None
+                    try:
+                        if _row[2].value is not None:
+                            _tp = float(str(_row[2].value).strip().replace(",", ""))
+                    except Exception:
+                        _tp = None
+                    _pgv = _vals[3] if len(_vals) > 3 else ""
+                    _sec = _vals[6] if len(_vals) > 6 else ""
+                    smv_src[_c] = {"smv": _tp, "pg": _pgv, "sec": _sec, "name": _vals[1] if len(_vals) > 1 else ""}
+                    _done = True
+                    break
+                if _done:
+                    break
+            _wbo.close()
+    except Exception as e:
+        log("      (SMV source read skipped: %s)" % e)
+        smv_src = {}
+    log("      SMV source: %d SKU rows" % len(smv_src))
+    _ovr = 0
+    for _c, _p in code2pg.items():
+        if _c not in smv_src:
+            continue
+        _s = smv_src[_c]
+        if _s.get("smv") is not None:
+            _p["smv"] = _s["smv"]
+            _ovr += 1
+        _pref = str(_s.get("pg") or "").split(" ", 1)[0].strip() if (_s.get("pg") or "") else ""
+        _sec2 = str(_s.get("sec") or "")
+        if _pref in ("GSS", "LED", "HAP") and _pref:
+            _p["sec"] = _pref
+        elif _sec2 in ("GSS", "LED", "HAP"):
+            _p["sec"] = _sec2
+    if _ovr:
+        log("      SMV source overrides applied: %d SKU" % _ovr)
     _n_smv = 0
     _smv_codes = []
     for _c, _p in code2pg.items():
@@ -945,6 +1019,7 @@ def main():
         XLSX_TMP = os.path.join(HERE, "_latest_capacity_study.xlsx")
     try:
         download()
+        download_smv_source()
         results, media = parse_all()
         if len(results) < 50:
             raise SystemExit("Expected 100+ bulletins, got %d" % len(results))
