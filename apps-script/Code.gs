@@ -170,8 +170,14 @@ function doAddSmv(p) {
   var ss = null;
   try { ss = SpreadsheetApp.openById(SMV_SRC_SHEET_ID); } catch (e) { ss = null; }
   if (!ss) ss = ss_();
-  var sh = ss.getSheetByName(SMV_SRC_TAB);
-  if (!sh) return { ok: false, error: "Sheet not found: " + SMV_SRC_TAB };
+  var sh = null;
+  var _snames = ["Data", "SMV", "Sheet1", "Master Data", "SKUS"];
+  for (var _k = 0; _k < _snames.length; _k++) {
+    var _cand = ss.getSheetByName(_snames[_k]);
+    if (_cand) { sh = _cand; break; }
+  }
+  if (!sh) { var _sheets = ss.getSheets(); if (_sheets && _sheets.length) sh = _sheets[0]; }
+  if (!sh) return { ok: false, error: "Sheet not found" };
   var data = sh.getDataRange().getValues();
   var out = [data[0].slice()];
   for (var i = 1; i < data.length; i++) {
