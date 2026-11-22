@@ -445,19 +445,14 @@ def parse_all():
             m["pg"] = code2pg.get(hc)
             results.append(m)
 
-    # ---- SKUs that are in PG LIST (with an SMV) but have no product tab yet ----
+    # ---- SKUs that are in PG LIST but have no product tab yet ----
     # They are still real SKUs, so they get a card marked "Incomplete" instead of
-    # silently disappearing until someone builds the study tab.
+    # silently disappearing until someone builds the study tab. User decision
+    # (2026-11-22): every PG LIST SKU without a bulletin card gets an Incomplete card.
     have = set(_norm_code(r["header"].get("code")) for r in results)
     added = 0
     for c, p in code2pg.items():
         if c in have:
-            continue
-        try:
-            smv_ok = float(p.get("smv")) > 0
-        except Exception:
-            smv_ok = False
-        if not smv_ok:
             continue
         nm2 = p.get("name") or c
         results.append({
@@ -470,7 +465,7 @@ def parse_all():
         })
         added += 1
     if added:
-        log("      + %d PG LIST SKUs added (no study tab yet)" % added)
+        log("      + %d PG LIST SKUs added (no study tab yet, as Incomplete)" % added)
 
     # ---- SKUs whose operations were typed on the bulletin page (Manual Ops tab) ----
     added_manual = 0
