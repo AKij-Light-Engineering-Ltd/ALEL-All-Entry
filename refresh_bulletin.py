@@ -644,6 +644,7 @@ def build_html(results, media_bytes, out_path=None):
                 mp = None
         sum_smv = sum(num(o.get("P")) or 0 for o in ops)
         has_real = any((o.get("B") or "").strip() and (num(o.get("P")) or 0) > 0 for o in ops)
+        r["_complete"] = has_real   # chips/headers count complete bulletins only
         realflag = "1" if has_real else "0"
         smv_eff = smv if smv is not None else (sum_smv if sum_smv else None)
         sum_mp_ops = sum(num(o.get("F")) or 0 for o in ops)
@@ -824,14 +825,23 @@ def build_html(results, media_bytes, out_path=None):
             f'</section>')
 
     # ---------- chips ----------
+    # Chip badges must match what the list shows: the main views (All / GSS /
+    # LED / HAP) render complete bulletins only, so count complete ones here.
+    # Incomplete cards are counted separately (⚠ Incomplete view).
     sec_counts = {"GSS": 0, "LED": 0, "HAP": 0, "OTHER": 0}
+    inc_count = 0
+    comp_total = 0
     for r in results:
+        if not r.get("_complete"):
+            inc_count += 1
+            continue
+        comp_total += 1
         s = (r.get("section") or "").strip().upper()
         key = s if s in sec_counts else "OTHER"
         sec_counts[key] += 1
     chip_html = ""
     order = ["GSS", "LED", "HAP", "OTHER"]
-    chip_html = '<button class="chip on" data-sec="all">All Bulletins<i>%TOTAL%</i></button>'
+    chip_html = f'<button class="chip on" data-sec="all">All Bulletins<i>{comp_total}</i></button>'
     for k in order:
         if sec_counts.get(k):
             lbl = {"OTHER": "Other"}.get(k, k)
@@ -856,6 +866,7 @@ def build_html(results, media_bytes, out_path=None):
     html_doc = HTML_TEMPLATE.replace("%BULLETINS%", "".join(bullets)) \
                             .replace("%CHIPS%", chip_html) \
                             .replace("%TOTAL%", str(len(results))) \
+                            .replace("%INC%", str(inc_count)) \
                             .replace("%REFRESHED%", today) \
                             .replace("%BUILDSTAMP%", buildstamp) \
                             .replace("%CATALOG%", cat_json) \
@@ -1570,7 +1581,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="on" data-v="all">All</button>
       <button data-v="pend">Pending</button>
       <button data-v="appr">Approved Only</button>
-      <button data-v="inc" id="onlyInc" title="Show only incomplete bulletins">&#9888; Incomplete</button>
+      <button data-v="inc" id="onlyInc" title="Show only incomplete bulletins">&#9888; Incomplete <b id="incCnt">%INC%</b></button>
     </div>
     <select id="sortSel" class="sortsel" title="Sort bulletins">
       <option value="ob">OB number</option>
@@ -1675,7 +1686,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if(gone && gone.parentNode) gone.parentNode.removeChild(gone);
     var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=pulseBullets.length;
     var allCnt=document.querySelector('.chip[data-sec="all"] i');
-    if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
+    if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin:not(.incomplete)').length;
     try{ apply(); }catch(e){}
   }
   document.addEventListener('click', function(ev){
@@ -2026,7 +2037,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     document.body.classList.add('onhome');
     document.querySelectorAll('.hv-card').forEach(function(cd){
       var s=cd.getAttribute('data-go');
-      var cnt=bullets.filter(function(b){ return b.getAttribute('data-sec')===s; }).length;
+      var cnt=bullets.filter(function(b){ return b.getAttribute('data-sec')===s && !b.classList.contains('incomplete'); }).length;
       var el=cd.querySelector('[data-seccnt="'+s+'"]');
       if(el) el.textContent = cnt ? (cnt+' bulletins') : 'No data yet';
     });
@@ -2658,11 +2669,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         cnt++;
       });
       var pc=document.getElementById('pulseCnt'); if(pc) pc.textContent=cnt;
-      var allCnt=document.querySelector('.chip[data-sec="all"] i'); if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin').length;
+      var allCnt=document.querySelector('.chip[data-sec="all"] i'); if(allCnt) allCnt.textContent=document.querySelectorAll('.bulletin:not(.incomplete)').length;
       // keep section chip counts in sync now that pulse cards are merged into sections
       ['gss','led','hap'].forEach(function(sec){
         var chip=document.querySelector('.chip[data-sec="'+sec+'"] i');
-        if(chip) chip.textContent=document.querySelectorAll('.bulletin[data-sec="'+sec+'"]').length;
+        if(chip) chip.textContent=document.querySelectorAll('.bulletin[data-sec="'+sec+'"]:not(.incomplete)').length;
       });
       apply();
     }).catch(function(){});
